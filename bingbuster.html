@@ -6,6 +6,9 @@
 <title>Bingbuster</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap">
 <style>
+.case.sec{outline:2px dashed rgba(255,200,61,.6);outline-offset:2px}
+.gchips{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 8px}.gchip{padding:4px 10px;border-radius:99px;border:1px solid var(--bd,#444);background:transparent;color:inherit;font:inherit;font-size:13px;cursor:pointer}.gchip.on{background:var(--ac,#ffc83d);color:#1a1400;border-color:transparent}
+.gnew{display:flex;gap:6px;margin:4px 0}.gnew input{flex:1}
 .ro [data-add],.ro [data-export],.ro [data-edit],.ro #ed,.ro .mv,.ro #ro,.ro [data-resetord]{display:none!important}
 .ro [data-seen],.ro [data-cat]{pointer-events:none}
 
@@ -117,13 +120,14 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const norm=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
 const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h};
 const gOf=f=>(f.generi&&f.generi[0])||"Altro";
-const visible=()=>FILMS.filter(f=>(genre==="Tutti"||genre===GR||gOf(f)===genre)&&(!unseen||!f.visto)&&(!q||norm(f.titolo+" "+f.regista).includes(q)));
+const visible=()=>FILMS.filter(f=>(genre==="Tutti"||genre===GR||gOf(f)===genre||(f.generi||[]).includes(genre))&&(!unseen||!f.visto)&&(!q||norm(f.titolo+" "+f.regista).includes(q)));
 const cover=f=>{const bd=f.formato!=="DVD";return `<button class="case ${bd?"bd":"dvd"}${f.in_catalogo===false?" out":""}" data-id="${f.id}" style="--h:${hue(f.titolo)}"><b class="logo">${bd?"Blu-ray":"DVD"}</b><span class="art"><img src="posters/${f.id}.jpg?v=${f._v||0}" alt="" loading="lazy" onerror="this.remove()"><span class="ct">${esc(f.titolo)}</span><span class="cy">${f.anno}</span>${f.visto?'<i class="seen">✓</i>':""}</span></button>`};
 const GR="@regista",cmpIt=(a,b)=>a.localeCompare(b,"it");
-let ORD=[];  // ordine personalizzato degli scaffali dei generi (settings.json)
+let ORD=[],GX=[];   // GX = generi creati a mano (settings.json)
+// ORD: ordine personalizzato degli scaffali dei generi (settings.json)
 const barOrder=()=>{  // ordine di tutta la barra: Tutti, Regista e generi (ORD = ordine scelto dall'utente)
   const p=g=>{const i=ORD.indexOf(g);return i>=0?i:g==="Tutti"?-2:g===GR?-1:1e9};
-  return ["Tutti",GR,...new Set(FILMS.map(gOf))].sort((a,b)=>p(a)-p(b)||cmpIt(a,b));
+  return ["Tutti",GR,...new Set([...FILMS.map(gOf),...allGenres()])].sort((a,b)=>p(a)-p(b)||cmpIt(a,b));
 };
 const genreOrder=()=>barOrder().filter(g=>g!=="Tutti"&&g!==GR);
 function dirOf(f){  // primo regista: "Cognome, Nome"; gestisce elenchi di più registi e sigle come "Coen Bros."
@@ -133,23 +137,32 @@ function dirOf(f){  // primo regista: "Cognome, Nome"; gestisce elenchi di più 
   if(p.length>1&&!/\.$/.test(sur)){name=p[1];if(name.endsWith(" "+sur))name=name.slice(0,-sur.length-1)}
   return{sur,name,label:name?sur+", "+name:sur};
 }
+const cnt=a=>{const p=a.filter(f=>gOf(f)===genre).length,s=a.length-p;return s?`${p} (+${s} da altri generi)`:`${p}`};   // i conteggi si riferiscono al primo genere; gli altri sono indicati a parte
 function render(){
   $("#chips").innerHTML=barOrder().map(g=>`<div class="chip${g===genre?" on":""}" role="button" tabindex="0" draggable="${RO?"false":"true"}" data-g="${esc(g)}">${esc(g===GR?"Regista":g)}</div>`).join("");
   const vis=visible(),by={};
   const dir=genre===GR,meta={};
-  vis.forEach(f=>{let k=gOf(f);if(dir){const d=dirOf(f);k=d.label;meta[k]=d}(by[k]??=[]).push(f)});
+  const gv=genre!=="Tutti"&&!dir;   // in un genere specifico: un solo scaffale, con anche i film che lo hanno come genere secondario
+  vis.forEach(f=>{let k=gv?genre:gOf(f);if(dir){const d=dirOf(f);k=d.label;meta[k]=d}(by[k]??=[]).push(f)});
   const keys=dir?Object.keys(by).sort((a,b)=>(meta[a].sur===""?1:0)-(meta[b].sur===""?1:0)||cmpIt(meta[a].sur,meta[b].sur)||cmpIt(meta[a].name,meta[b].name)):genreOrder().filter(g=>by[g]),tutti=genre==="Tutti";
-  $("#shelves").innerHTML=keys.length?keys.map((k,i)=>`<section class="shelf"><h2>${esc(k)}<small>${by[k].length}</small>${tutti?`<span class="mv"><button class="mvb" data-mv="up" data-k="${esc(k)}" aria-label="Sposta lo scaffale in su"${i?"":" disabled"}>▲</button><button class="mvb" data-mv="down" data-k="${esc(k)}" aria-label="Sposta lo scaffale in giù"${i<keys.length-1?"":" disabled"}>▼</button></span>`:""}</h2><div class="row">${by[k].sort(cmpDir).map(cover).join("")}</div><div class="board"></div></section>`).join(""):'<p class="empty">Nessun film trovato su questi scaffali.</p>';
+  $("#shelves").innerHTML=keys.length?keys.map((k,i)=>`<section class="shelf"><h2>${esc(k)}<small>${gv?cnt(by[k]):by[k].length}</small>${tutti?`<span class="mv"><button class="mvb" data-mv="up" data-k="${esc(k)}" aria-label="Sposta lo scaffale in su"${i?"":" disabled"}>▲</button><button class="mvb" data-mv="down" data-k="${esc(k)}" aria-label="Sposta lo scaffale in giù"${i<keys.length-1?"":" disabled"}>▼</button></span>`:""}</h2><div class="row">${by[k].sort(cmpDir).map(f=>gv&&gOf(f)!==genre?cover(f).replace('class="case ','class="case sec '):cover(f)).join("")}</div><div class="board"></div></section>`).join(""):'<p class="empty">Nessun film trovato su questi scaffali.</p>';
   $("#ro").hidden=!ORD.length;
-  $("#count").textContent=`${vis.length} film · ${keys.length} scaffali`;
+  $("#count").textContent=`${gv?cnt(vis):vis.length} film · ${keys.length} scaffali`;
 }
 const cmpDir=(a,b)=>{const A=dirOf(a),B=dirOf(b);return (A.sur===""?1:0)-(B.sur===""?1:0)||cmpIt(A.sur,B.sur)||cmpIt(A.name,B.name)||a.anno-b.anno||cmpIt(a.titolo,b.titolo)};
-const allGenres=()=>[...new Set(FILMS.flatMap(f=>f.generi||[]))].sort((a,b)=>a.localeCompare(b,"it"));
-const editPanel=f=>`<div class="edit" id="ed" hidden><p id="em" class="msg" role="status"></p>
+const allGenres=()=>[...new Set([...FILMS.flatMap(f=>f.generi||[]),...GX])].sort((a,b)=>a.localeCompare(b,"it"));
+let selG=[];
+const genChips=()=>[...new Set([...allGenres(),...selG])].sort(cmpIt).map(g=>`<button type="button" class="gchip${selG.includes(g)?" on":""}" data-gt="${esc(g)}">${selG[0]===g?"★ ":""}${esc(g)}</button>`).join("");
+const genPrim=()=>selG.length?selG.map(g=>`<option${g===selG[0]?" selected":""}>${esc(g)}</option>`).join(""):"<option value=\"\">(nessuno: scaffale Altro)</option>";
+const refreshG=()=>{$("#egc").innerHTML=genChips();$("#egp").innerHTML=genPrim()};
+const editPanel=f=>(selG=[...(f.generi||[])],`<div class="edit" id="ed" hidden><p id="em" class="msg" role="status"></p>
 <label>Titolo<input id="en" value="${esc(f.titolo)}"></label>
 <label>Regista (Cognome, Nome)<input id="er" value="${esc(f.regista||"")}"></label>
 <label>Anno<input id="ea" type="number" min="1888" max="2100" value="${f.anno}"></label>
-<label>Generi (separati da virgola; il primo decide lo scaffale)<input id="eg" list="gl" value="${esc((f.generi||[]).join(", "))}"></label><datalist id="gl">${allGenres().map(g=>`<option value="${esc(g)}">`).join("")}</datalist>
+<fieldset><legend>Generi</legend><div class="gchips" id="egc">${genChips()}</div>
+<label>Genere principale (decide lo scaffale e i conteggi)<select id="egp">${genPrim()}</select></label>
+<div class="gnew"><input id="eng" placeholder="Nuovo genere…" maxlength="40" aria-label="Nuovo genere"><button class="btn" type="button" data-gnew>➕ Crea</button></div>
+<p class="meta">Un genere nuovo è disponibile per tutti i film e compare nella barra. Il film appare anche negli altri generi scelti.</p></fieldset>
 <label>Formato<select id="ef"><option${f.formato==="DVD"?" selected":""}>DVD</option><option${f.formato==="DVD"?"":" selected"}>Blu-ray</option></select></label>
 <label>Trailer (link YouTube o ID del video)<input id="et" value="${f.trailer_youtube?esc("https://www.youtube.com/watch?v="+f.trailer_youtube):""}"></label>
 <div class="acts"><button class="btn" data-save>Salva modifiche</button></div>
@@ -157,7 +170,7 @@ const editPanel=f=>`<div class="edit" id="ed" hidden><p id="em" class="msg" role
 <fieldset><legend>Elimina</legend><div class="acts"><button class="btn danger" data-del>🗑 Elimina film</button></div></fieldset>
 <fieldset><legend>Collega a TMDB</legend>${f.tmdb_id?`<p class="meta">Collegato a <a href="https://www.themoviedb.org/${f.tmdb_type==="tv"?"tv":"movie"}/${f.tmdb_id}" target="_blank" rel="noopener">${esc(f.titolo_tmdb||f.titolo)}</a>${f.match&&f.match.confidenza==="da_rivedere"?" (da rivedere)":""}</p>`:""}
 <label>Link della scheda TMDB<input id="tl" placeholder="https://www.themoviedb.org/movie/603-matrix"></label><div class="acts"><button class="btn" data-turl>Collega da link</button></div>
-<p class="meta">Oppure cerca:</p><div class="tm"><input id="tq" value="${esc(f.titolo)}" aria-label="Titolo"><input id="ty" size="5" value="${f.anno}" aria-label="Anno"><select id="tt"><option value="movie">Film</option><option value="tv">Serie TV</option></select><button class="btn" data-tsearch>Cerca</button></div><div id="tr"></div></fieldset></div>`;
+<p class="meta">Oppure cerca:</p><div class="tm"><input id="tq" value="${esc(f.titolo)}" aria-label="Titolo"><input id="ty" size="5" value="${f.anno}" aria-label="Anno"><select id="tt"><option value="movie">Film</option><option value="tv">Serie TV</option></select><button class="btn" data-tsearch>Cerca</button></div><div id="tr"></div></fieldset></div>`);
 function open(f,ed){
   cur=f;
   $("#dl").innerHTML=`${cover(f)}<div class="info"><h3>${esc(f.titolo)}</h3><p class="meta">${esc(f.regista)} · ${f.anno}${f.durata?" · "+f.durata+" min":""}</p><p>${(f.generi||[]).map(g=>`<span class="tag">${esc(g)}</span>`).join("")}<span class="tag">${esc(f.formato||"Formato da verificare")}</span></p><p class="meta">${[f.voto?"★ "+f.voto:"",f.cast&&f.cast.length?"Con "+esc(f.cast.slice(0,4).join(", ")):""].filter(Boolean).join(" · ")}</p><p class="plot">${esc(f.trama||"La trama comparirà dopo l’abbinamento con TMDB.")}</p><div class="acts">${f.trailer_youtube?`<a class="btn" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=${esc(f.trailer_youtube)}">▶ Trailer</a>`:'<span class="btn off">Trailer non ancora disponibile</span>'}<button class="btn" data-seen>${f.visto?"✓ Visto":"Segna come visto"}</button><button class="btn${f.in_catalogo===false?" no":""}" data-cat>${f.in_catalogo===false?"Non in catalogo":"In Catalogo"}</button><button class="btn" data-edit>✎ Modifica</button></div></div>${editPanel(f)}<button class="x" data-close aria-label="Chiudi">✕</button>`;
@@ -169,7 +182,7 @@ let RO=false;
 async function post(u,b,raw){if(RO)throw new Error("Versione di sola lettura");const r=await fetch(u,{method:"POST",headers:raw?{}:{"Content-Type":"application/json"},body:raw?b:JSON.stringify(b)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Errore del server");return j}
 const ytId=v=>{const m=v.match(/(?:v=|youtu\.be\/|embed\/|shorts\/)([\w-]{11})/);return m?m[1]:/^[\w-]{11}$/.test(v)?v:null};
 async function saveEdit(){
-  const f={},nm=$("#en").value.trim(),rg=$("#er").value.trim().replace(/\s+/g," "),g=$("#eg").value.split(",").map(x=>x.trim()).filter(Boolean),t=$("#et").value.trim(),fm=$("#ef").value,id=t?ytId(t):null;
+  const f={},nm=$("#en").value.trim(),rg=$("#er").value.trim().replace(/\s+/g," "),g=[...selG],t=$("#et").value.trim(),fm=$("#ef").value,id=t?ytId(t):null;
   if(t&&!id)return msg("Link YouTube non valido.");
   if(!nm)return msg("Il titolo non può essere vuoto.");
   if(nm!==cur.titolo)f.titolo=nm;
@@ -225,6 +238,10 @@ chips.addEventListener("drop",async e=>{
 });
 chips.addEventListener("dragend",()=>{clr();dragK=null});
 chips.addEventListener("keydown",e=>{if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("chip")){e.preventDefault();e.target.click()}});
+async function newGenre(){
+  const nome=$("#eng").value.trim();if(!nome)return msg("Scrivi il nome del nuovo genere.");
+  try{const r=await post("/api/genre",{nome});GX=r.generi_extra;if(!selG.includes(r.nome))selG.push(r.nome);$("#eng").value="";refreshG();render();msg("Genere «"+r.nome+"» creato: ora è disponibile per tutti i film e nella barra.")}catch(e){msg(e.message)}
+}
 async function delFilm(){
   if(!confirm(`Eliminare “${cur.titolo}” dal catalogo?\n\nSparisce dalla pagina, dai file e dall’esportazione Excel. Una copia di sicurezza resta in eliminati.json.`))return;
   try{await post("/api/delete",{id:cur.id});FILMS=FILMS.filter(x=>x.id!==cur.id);cur=null;dlg.close();render()}catch(e){msg(e.message)}
@@ -242,10 +259,12 @@ async function link(tid,kind){
   msg("Collego…");
   try{const {mantenuti,...n}=await post("/api/tmdb/link",{id:cur.id,tmdb_id:+tid,type:kind});Object.assign(cur,n,{_v:Date.now()});render();open(cur,true);msg("Collegato a TMDB: "+(cur.titolo_tmdb||"")+"."+(mantenuti.length?" Mantenuti perché modificati a mano: "+mantenuti.join(", ")+".":""))}catch(e){msg(e.message)}
 }
-dlg.addEventListener("change",e=>{if(e.target.id==="ec")upload(e.target.files[0])});
+dlg.addEventListener("change",e=>{if(e.target.id==="ec")upload(e.target.files[0]);else if(e.target.id==="egp"&&e.target.value){selG=[e.target.value,...selG.filter(g=>g!==e.target.value)];refreshG()}});
 document.addEventListener("click",e=>{
   const t=e.target.closest("button,.chip");if(!t)return;
   if(t.dataset.g){genre=t.dataset.g;render()}
+  else if(t.hasAttribute("data-gt")){const g=t.dataset.gt,i=selG.indexOf(g);if(i>=0)selG.splice(i,1);else selG.push(g);refreshG()}
+  else if(t.hasAttribute("data-gnew"))newGenre();
   else if(t.hasAttribute("data-close"))dlg.close();
   else if(t.hasAttribute("data-seen")){const v=!cur.visto;post("/api/edit",{id:cur.id,fields:{visto:v}}).then(()=>{cur.visto=v;render();open(cur)}).catch(e=>alert(e.message))}
   else if(t.hasAttribute("data-add")){$("#af").reset();$("#am").textContent="";$("#ad").showModal();$("#at").focus()}
@@ -282,7 +301,7 @@ $("#rnd").addEventListener("click",()=>{const p=visible().filter(f=>f.in_catalog
   if(RO)document.body.classList.add("ro");
   try{FILMS=await (await fetch("films.json",{cache:"no-cache"})).json()}
   catch(e){$("#shelves").innerHTML='<p class="empty">Non riesco a leggere films.json. Avvia il server dalla cartella con <code>python server.py</code> e vai su http://localhost:8000/bingbuster.html</p>';return}
-  try{const r=await fetch("settings.json",{cache:"no-cache"});if(r.ok)ORD=(await r.json()).ordine_generi||[]}catch(e){}
+  try{const r=await fetch("settings.json",{cache:"no-cache"});if(r.ok){const st=await r.json();ORD=st.ordine_generi||[];GX=st.generi_extra||[]}}catch(e){}
   try{const r=await fetch("edits.json",{cache:"no-cache"});if(r.ok){const E=await r.json();FILMS.forEach(f=>Object.assign(f,E[f.id]||{}))}}catch(e){}
   render();
 })();

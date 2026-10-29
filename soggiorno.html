@@ -95,11 +95,11 @@ let FILMS;
 try { FILMS = await (await fetch("films.json",{cache:"no-cache"})).json(); }
 catch (e) { $("#load").innerHTML = "Non riesco a leggere films.json.<br>Avvia il server con <code>python server.py</code> e apri http://localhost:8000/soggiorno.html"; throw e; }
 try { const r = await fetch("edits.json",{cache:"no-cache"}); if (r.ok) { const E = await r.json(); FILMS.forEach(f => Object.assign(f, E[f.id] || {})); } } catch (e) {}
-let ORD = []; try { const r = await fetch("settings.json",{cache:"no-cache"}); if (r.ok) ORD = (await r.json()).ordine_generi || []; } catch (e) {}
+let ORD = [], GX = []; try { const r = await fetch("settings.json",{cache:"no-cache"}); if (r.ok) { const st = await r.json(); ORD = st.ordine_generi || []; GX = st.generi_extra || []; } } catch (e) {}
 const GR = "@regista";
 const gOf = f => (f.generi && f.generi[0]) || "Altro";
 const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
-const barOrder = () => { const p = g => { const i = ORD.indexOf(g); return i >= 0 ? i : g === "Tutti" ? -2 : g === GR ? -1 : 1e9; }; return ["Tutti", GR, ...new Set(FILMS.map(gOf))].sort((a, b) => p(a) - p(b) || cmpIt(a, b)); };
+const barOrder = () => { const p = g => { const i = ORD.indexOf(g); return i >= 0 ? i : g === "Tutti" ? -2 : g === GR ? -1 : 1e9; }; return ["Tutti", GR, ...new Set([...FILMS.map(gOf), ...FILMS.flatMap(f => f.generi || []), ...GX])].sort((a, b) => p(a) - p(b) || cmpIt(a, b)); };
 function dirOf(f) {            // primo regista: "Cognome, Nome" (stessa logica del catalogo)
   const p = (f.regista || "").split(",").map(x => x.trim()).filter(Boolean);
   if (!p.length) return { sur: "", name: "", label: "" };
@@ -274,7 +274,7 @@ function drawTV(c) {
   if (!c) {
     x.fillStyle = "#ffc83d"; x.font = "700 86px Impact,'Arial Narrow',sans-serif"; x.fillText("BINGBUSTER", 56, 70);
     x.fillStyle = "#e9ecff"; x.font = "600 44px system-ui,sans-serif"; x.fillText("Vista: " + viewLabel(VIEW), 60, 200);
-    x.fillStyle = "#9aa0c4"; x.font = "34px system-ui,sans-serif"; x.fillText(shownCount + " film in libreria", 60, 262);
+    x.fillStyle = "#9aa0c4"; x.font = "34px system-ui,sans-serif"; x.fillText(countLabel(VIEW) + " film in libreria", 60, 262);
     x.fillText("Premi V, o clicca TV e telecomando,", 60, 400); x.fillText("per cambiare vista.", 60, 446);
   } else {
     const f = c.film; x.fillStyle = "#ffc83d"; x.font = "600 26px system-ui,sans-serif"; x.fillText("ORA SULLO SCAFFALE", 56, 36);
@@ -344,6 +344,7 @@ function setDivLabel(d, text) {
 
 /* ---------- viste: l'ordine dei film sulla libreria ---------- */
 let VIEW = "Tutti", shownCount = 0, pickables = [];
+const countLabel = v => { if (v === "Tutti" || v === GR || v === CV) return shownCount; const p = FILMS.filter(f => gOf(f) === v).length, s = shownCount - p; return s > 0 ? `${p} (+${s} da altri generi)` : p; };   // i conteggi guardano il primo genere
 const CV = "@custom", viewLabel = v => v === "Tutti" ? "Tutti" : v === GR ? "Regista" : v === CV ? "Personalizzata" : v;
 const CUS = { letters: new Set(), visto: "", cat: "", fmt: new Set(), gen: new Set(), films: new Map(), dirs: new Map() };
 const dkey = f => { const d = dirOf(f); return d.sur ? norm(d.label) : ""; };
@@ -351,7 +352,7 @@ const initOf = f => { const s = dirOf(f).sur; return s ? (norm(s)[0] || "#").toU
 const filtersOn = () => CUS.letters.size || CUS.visto !== "" || CUS.cat !== "" || CUS.fmt.size || CUS.gen.size;
 const customFilter = () => {
   const on = filtersOn(), picks = CUS.films.size || CUS.dirs.size; if (!on && !picks) return FILMS.slice();   // nulla scelto: tutti
-  return FILMS.filter(f => (on && (!CUS.letters.size || CUS.letters.has(initOf(f))) && (CUS.visto === "" || !!f.visto === (CUS.visto === "1")) && (CUS.cat === "" || (f.in_catalogo !== false) === (CUS.cat === "1")) && (!CUS.fmt.size || CUS.fmt.has(f.formato === "DVD" ? "DVD" : "Blu-ray")) && (!CUS.gen.size || CUS.gen.has(gOf(f)))) || CUS.films.has(f.id) || CUS.dirs.has(dkey(f)));
+  return FILMS.filter(f => (on && (!CUS.letters.size || CUS.letters.has(initOf(f))) && (CUS.visto === "" || !!f.visto === (CUS.visto === "1")) && (CUS.cat === "" || (f.in_catalogo !== false) === (CUS.cat === "1")) && (!CUS.fmt.size || CUS.fmt.has(f.formato === "DVD" ? "DVD" : "Blu-ray")) && (!CUS.gen.size || (f.generi && f.generi.length ? f.generi : [gOf(f)]).some(g => CUS.gen.has(g)))) || CUS.films.has(f.id) || CUS.dirs.has(dkey(f)));
 };
 const cmpDir = (a, b) => { const A = dirOf(a), B = dirOf(b); return (A.sur === "" ? 1 : 0) - (B.sur === "" ? 1 : 0) || cmpIt(A.sur, B.sur) || cmpIt(A.name, B.name) || a.anno - b.anno || cmpIt(a.titolo, b.titolo); };   // regista (primo), poi anno
 function withInitials(sorted, list) { let cur = null; sorted.forEach(f => { const L = initOf(f); if (L !== cur) { cur = L; list.push({ label: L }); } list.push({ film: f }); }); }
@@ -362,7 +363,7 @@ function buildList(view) {
     barOrder().filter(g => g !== "Tutti" && g !== GR && by[g]).forEach(g => { list.push({ label: g }); by[g].sort(cmpDir).forEach(f => list.push({ film: f })); });
   } else if (view === GR) withInitials([...FILMS].sort(cmpDir), list);
   else if (view === CV) withInitials(customFilter().sort(cmpDir), list);
-  else FILMS.filter(f => gOf(f) === view).sort(cmpDir).forEach(f => list.push({ film: f }));
+  else FILMS.filter(f => gOf(f) === view || (f.generi || []).includes(view)).sort(cmpDir).forEach(f => list.push({ film: f }));
   return list;
 }
 function setView(view, snap = false) {
@@ -395,7 +396,7 @@ function setView(view, snap = false) {
   if (snap) Object.values(inst).forEach(i => i.instanceMatrix.needsUpdate = true);
   animating = true;
   pickables = [...covers.filter(c => c.shown).map(c => c.mesh), tvScreen, remote];
-  $("#where").innerHTML = `📚 ${esc(viewLabel(view))}<small>${shownCount} film</small>`;
+  $("#where").innerHTML = `📚 ${esc(viewLabel(view))}<small>${countLabel(view)} film</small>`;
   drawTV(null); setHover(null);
   document.querySelectorAll("#views .chip").forEach(b => b.classList.toggle("on", b.dataset.v === view));
   stream();
