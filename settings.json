@@ -22,5 +22,8 @@
   "Thriller",
   "Western",
   "Altro"
+ ],
+ "generi_extra": [
+  "Serie TV"
  ]
 }
