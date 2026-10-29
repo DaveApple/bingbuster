@@ -92,10 +92,10 @@ if (TOUCH) { document.body.classList.add("touch"); $("#touch").hidden = false; $
 
 /* ---------- dati (stessi file della pagina del catalogo) ---------- */
 let FILMS;
-try { FILMS = await (await fetch("films.json")).json(); }
+try { FILMS = await (await fetch("films.json",{cache:"no-cache"})).json(); }
 catch (e) { $("#load").innerHTML = "Non riesco a leggere films.json.<br>Avvia il server con <code>python server.py</code> e apri http://localhost:8000/soggiorno.html"; throw e; }
-try { const r = await fetch("edits.json"); if (r.ok) { const E = await r.json(); FILMS.forEach(f => Object.assign(f, E[f.id] || {})); } } catch (e) {}
-let ORD = []; try { const r = await fetch("settings.json"); if (r.ok) ORD = (await r.json()).ordine_generi || []; } catch (e) {}
+try { const r = await fetch("edits.json",{cache:"no-cache"}); if (r.ok) { const E = await r.json(); FILMS.forEach(f => Object.assign(f, E[f.id] || {})); } } catch (e) {}
+let ORD = []; try { const r = await fetch("settings.json",{cache:"no-cache"}); if (r.ok) ORD = (await r.json()).ordine_generi || []; } catch (e) {}
 const GR = "@regista";
 const gOf = f => (f.generi && f.generi[0]) || "Altro";
 const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };

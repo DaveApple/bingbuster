@@ -280,10 +280,10 @@ $("#rnd").addEventListener("click",()=>{const p=visible().filter(f=>f.in_catalog
 (async()=>{
   try{RO=(await (await fetch("/api/mode")).json()).readonly===true}catch(e){RO=!["localhost","127.0.0.1"].includes(location.hostname)}   // su localhost si modifica sempre (anche con un server.py vecchio); su un sito statico o da file è sola lettura
   if(RO)document.body.classList.add("ro");
-  try{FILMS=await (await fetch("films.json")).json()}
+  try{FILMS=await (await fetch("films.json",{cache:"no-cache"})).json()}
   catch(e){$("#shelves").innerHTML='<p class="empty">Non riesco a leggere films.json. Avvia il server dalla cartella con <code>python server.py</code> e vai su http://localhost:8000/bingbuster.html</p>';return}
-  try{const r=await fetch("settings.json");if(r.ok)ORD=(await r.json()).ordine_generi||[]}catch(e){}
-  try{const r=await fetch("edits.json");if(r.ok){const E=await r.json();FILMS.forEach(f=>Object.assign(f,E[f.id]||{}))}}catch(e){}
+  try{const r=await fetch("settings.json",{cache:"no-cache"});if(r.ok)ORD=(await r.json()).ordine_generi||[]}catch(e){}
+  try{const r=await fetch("edits.json",{cache:"no-cache"});if(r.ok){const E=await r.json();FILMS.forEach(f=>Object.assign(f,E[f.id]||{}))}}catch(e){}
   render();
 })();
 </script>
