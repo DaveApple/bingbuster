@@ -278,7 +278,7 @@ $("#s").addEventListener("input",e=>{q=norm(e.target.value.trim());render()});
 $("#u").addEventListener("change",e=>{unseen=e.target.checked;render()});
 $("#rnd").addEventListener("click",()=>{const p=visible().filter(f=>f.in_catalogo!==false);if(p.length)open(p[Math.floor(Math.random()*p.length)])});
 (async()=>{
-  try{RO=(await (await fetch("/api/mode")).json()).readonly===true}catch(e){RO=true}   // senza server (sito statico, file aperto da disco) è sola lettura
+  try{RO=(await (await fetch("/api/mode")).json()).readonly===true}catch(e){RO=!["localhost","127.0.0.1"].includes(location.hostname)}   // su localhost si modifica sempre (anche con un server.py vecchio); su un sito statico o da file è sola lettura
   if(RO)document.body.classList.add("ro");
   try{FILMS=await (await fetch("films.json")).json()}
   catch(e){$("#shelves").innerHTML='<p class="empty">Non riesco a leggere films.json. Avvia il server dalla cartella con <code>python server.py</code> e vai su http://localhost:8000/bingbuster.html</p>';return}
