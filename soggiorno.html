@@ -55,8 +55,14 @@ canvas{display:block;width:100%;height:100%;touch-action:none}
 #edp .danger{background:#7a2c20;color:#fff}
 #edp .hint,#edp .st{color:var(--mu);font-size:12px;margin:4px 0}
 #editb{position:fixed;left:14px;top:50px;z-index:10}
-#touch{position:fixed;left:14px;bottom:18px;display:flex;flex-direction:column;gap:10px;z-index:10}
-#touch button{width:62px;height:62px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:24px}
+#touch{position:fixed;left:12px;bottom:calc(84px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(3,58px);grid-template-rows:repeat(3,58px);gap:6px;z-index:10;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#touch button{width:58px;height:58px;border-radius:50%;border:0;background:rgba(255,255,255,.22);color:#fff;font-size:22px;touch-action:none;-webkit-tap-highlight-color:transparent;padding:0}
+#touch button:active,#touch button.on{background:rgba(255,200,61,.55)}
+#touch #fw{grid-area:1/2}#touch #lf{grid-area:2/1}#touch #rt{grid-area:2/3}#touch #bk{grid-area:3/2}
+#eyebar{position:fixed;right:10px;top:50%;transform:translateY(-50%);width:44px;height:230px;z-index:10;display:none;flex-direction:column;align-items:center;gap:4px;color:#fff;font-size:11px;text-shadow:0 1px 3px #000;-webkit-user-select:none;user-select:none;touch-action:none}
+body.touch #eyebar{display:flex}
+#eytrack{position:relative;flex:1;width:14px;border-radius:7px;background:rgba(255,255,255,.25);touch-action:none}
+#eythumb{position:absolute;left:50%;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:var(--ac);box-shadow:0 1px 6px rgba(0,0,0,.6)}
 #menub{position:fixed;right:14px;bottom:18px;z-index:10;display:none}
 body.touch #menub{display:block}
 </style>
@@ -78,7 +84,8 @@ body.touch #menub{display:block}
   <p class="hint">Clicca un mobile o un quadro per selezionarlo e trascinalo col mouse (i quadri si spostano anche da un muro all’altro). Canc = elimina. WASD per muoverti. Caminetto, finestra e libreria sono fissi.</p>
   <button class="btn sec" id="ereset">↺ Arredo originale</button>
 </div>
-<div id="touch" hidden><button id="fw">▲</button><button id="bk">▼</button></div>
+<div id="touch" hidden><button id="fw" aria-label="Avanti">▲</button><button id="lf" aria-label="A sinistra">◀</button><button id="rt" aria-label="A destra">▶</button><button id="bk" aria-label="Indietro">▼</button></div>
+<div id="eyebar" aria-label="Altezza della vista"><span>alto</span><div id="eytrack"><div id="eythumb"></div></div><span>basso</span></div>
 <button class="btn sec" id="menub">☰ Menu</button>
 <div id="menu" hidden><div class="card">
   <h1>Il mio soggiorno</h1>
@@ -559,14 +566,14 @@ function stream() {
 setInterval(stream, 250);
 
 /* ---------- movimento in prima persona ---------- */
-let yaw = 0, pitch = 0.12; const keys = new Set(), touchMove = { f: 0 };
+let yaw = 0, pitch = 0.12; const keys = new Set(), touchMove = { f: 0, s: 0 };
 let EYE = 1.6; camera.position.set(3.2, EYE, 2.3);
 const applyLook = () => camera.rotation.set(pitch, yaw, 0, "YXZ");
 const inRects = (x, z) => rects.some(r => x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1);
 const inRoom = (x, z) => x > -RX + 0.4 && x < RX - 0.4 && z > -RZ + 0.4 && z < RZ - 0.4;
 function step(dt) {
   const f = (keys.has("KeyW") || keys.has("ArrowUp") ? 1 : 0) - (keys.has("KeyS") || keys.has("ArrowDown") ? 1 : 0) + touchMove.f;
-  let s = (keys.has("KeyD") ? 1 : 0) - (keys.has("KeyA") ? 1 : 0);
+  let s = (keys.has("KeyD") ? 1 : 0) - (keys.has("KeyA") ? 1 : 0) + touchMove.s;
   if (ctrlOn) { s += (keys.has("ArrowRight") ? 1 : 0) - (keys.has("ArrowLeft") ? 1 : 0); }                 // Ctrl + ←/→: passo laterale
   else { if (keys.has("ArrowLeft")) yaw += 1.8 * dt; if (keys.has("ArrowRight")) yaw -= 1.8 * dt; }
   if (!f && !s) return;
@@ -679,11 +686,42 @@ renderer.domElement.addEventListener("mousemove", e => {
 renderer.domElement.addEventListener("mousedown", e => { if (e.button !== 0) return; ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); if (editMode && editDown()) return; if (locked()) activate(pick(true)); else { dragging = true; moved = 0; } });
 addEventListener("mouseup", () => { if (editDrag) { editDrag = null; selBox && selBox.update(); save(); } if (dragging && moved < 6 && !panel) { if (editMode) select(null); else activate(pick(false)); } dragging = false; });
 renderer.domElement.addEventListener("wheel", e => { e.preventDefault(); if (panel || !menu.hidden) return; camera.fov = Math.max(22, Math.min(90, camera.fov + e.deltaY * 0.03)); camera.updateProjectionMatrix(); }, { passive: false });
-renderer.domElement.addEventListener("touchstart", e => { const t = e.touches[0]; last = { x: t.clientX, y: t.clientY, m: 0 }; }, { passive: true });
-renderer.domElement.addEventListener("touchmove", e => { if (!last) return; const t = e.touches[0]; look(t.clientX - last.x, t.clientY - last.y, 0.005); last.m += Math.abs(t.clientX - last.x) + Math.abs(t.clientY - last.y); last.x = t.clientX; last.y = t.clientY; }, { passive: true });
-renderer.domElement.addEventListener("touchend", () => { if (last && last.m < 8 && !panel) { ptr.set(last.x / innerWidth * 2 - 1, -(last.y / innerHeight) * 2 + 1); activate(pick(false)); } last = null; });
-const hold = (id, v) => { const b = $(id); b.addEventListener("touchstart", e => { e.preventDefault(); touchMove.f = v; }); b.addEventListener("touchend", () => touchMove.f = 0); b.addEventListener("touchcancel", () => touchMove.f = 0); };
-hold("#fw", 1); hold("#bk", -1);
+/* touch: il trascinamento muove la scena insieme al dito (assi invertiti rispetto al mouse); due dita = zoom */
+let pinch = null, pinched = false;
+const dist2 = ts => Math.hypot(ts[0].clientX - ts[1].clientX, ts[0].clientY - ts[1].clientY);
+renderer.domElement.addEventListener("touchstart", e => {
+  const ts = e.targetTouches;
+  if (ts.length >= 2) { pinch = dist2(ts); pinched = true; last = null; return; }
+  const t = ts[0]; last = { x: t.clientX, y: t.clientY, m: 0 };
+}, { passive: true });
+renderer.domElement.addEventListener("touchmove", e => {
+  const ts = e.targetTouches;
+  if (ts.length >= 2) {
+    const d = dist2(ts); if (pinch) { camera.fov = Math.max(22, Math.min(90, camera.fov - (d - pinch) * 0.12)); camera.updateProjectionMatrix(); } pinch = d; return;   // dita che si aprono = zoom avanti
+  }
+  if (!last || pinched) return; const t = ts[0];
+  look(-(t.clientX - last.x), -(t.clientY - last.y), 0.005);
+  last.m += Math.abs(t.clientX - last.x) + Math.abs(t.clientY - last.y); last.x = t.clientX; last.y = t.clientY;
+}, { passive: true });
+renderer.domElement.addEventListener("touchend", e => {
+  if (e.targetTouches.length === 0) { if (!pinched && last && last.m < 8 && !panel) { ptr.set(last.x / innerWidth * 2 - 1, -(last.y / innerHeight) * 2 + 1); activate(pick(false)); } last = null; pinch = null; pinched = false; }
+  else if (e.targetTouches.length === 1) pinch = null;
+});
+document.addEventListener("gesturestart", e => e.preventDefault());
+/* pulsanti di movimento: eventi "pointer", senza attese, il dito resta agganciato al pulsante */
+const hold = (id, key, v) => {
+  const b = $(id), on = e => { e.preventDefault(); b.setPointerCapture && b.setPointerCapture(e.pointerId); touchMove[key] = v; b.classList.add("on"); }, off = () => { touchMove[key] = 0; b.classList.remove("on"); };
+  b.addEventListener("pointerdown", on); b.addEventListener("pointerup", off); b.addEventListener("pointercancel", off); b.addEventListener("lostpointercapture", off); b.addEventListener("contextmenu", e => e.preventDefault());
+};
+hold("#fw", "f", 1); hold("#bk", "f", -1); hold("#lf", "s", -1); hold("#rt", "s", 1);
+/* barra laterale: altezza della vista */
+{
+  const tr = $("#eytrack"), th = $("#eythumb"), lo = 0.4, hi = 2.7; let lastEye = -1;
+  const setFrom = e => { const r = tr.getBoundingClientRect(); EYE = hi - Math.max(0, Math.min(1, (e.clientY - r.top) / r.height)) * (hi - lo); };
+  tr.addEventListener("pointerdown", e => { e.preventDefault(); tr.setPointerCapture(e.pointerId); setFrom(e); });
+  tr.addEventListener("pointermove", e => { if (tr.hasPointerCapture(e.pointerId)) setFrom(e); });
+  window.syncEyeBar = () => { if (EYE !== lastEye) { lastEye = EYE; th.style.top = ((hi - EYE) / (hi - lo) * 100) + "%"; } };
+}
 
 /* ---------- ricerca: vai davanti al film ---------- */
 function teleportTo(c) {
@@ -817,7 +855,7 @@ function tick() {
   animate(dt);
   flames.forEach(m => { const u = m.userData; m.scale.set(1 + 0.12 * Math.sin(t * 8 + u.i * 2), 1 + 0.18 * Math.sin(t * 11 + u.i * 3.1), 1); m.position.y = u.y0 + (m.scale.y - 1) * u.h / 2; });
   fireLight.intensity = 3 + 0.5 * Math.sin(t * 9) + 0.35 * Math.sin(t * 23.7);
-  pitch = Math.max(-1.35, Math.min(1.35, pitch)); camera.position.y = EYE; applyLook();
+  pitch = Math.max(-1.35, Math.min(1.35, pitch)); camera.position.y = EYE; if (window.syncEyeBar) syncEyeBar(); applyLook();
   if ((fr++ & 1) === 0 && !panel && !editMode && menu.hidden && (locked() || !TOUCH)) { const c = pick(locked() || TOUCH); if (c && c.special) setHover(c); else if (c !== hovered || hoverSpecial) setHover(c); }
   renderer.render(scene, camera);
 }
