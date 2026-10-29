@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Il mio soggiorno</title>
+<style>
+:root{--ac:#ffc83d;--acx:#1a1400;--bg:#14100d;--sf:#201813;--tx:#f6ecdd;--mu:#bfae96;--bd:#3d2f25}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#14110f;color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.btn{display:inline-block;padding:9px 14px;border-radius:10px;border:0;background:var(--ac);color:var(--acx);font:600 14px system-ui,sans-serif;cursor:pointer;text-decoration:none}
+.btn.sec{background:var(--bd);color:var(--tx)}
+#cross{position:fixed;left:50%;top:50%;width:6px;height:6px;margin:-3px;border-radius:50%;background:rgba(255,255,255,.85);box-shadow:0 0 0 1px rgba(0,0,0,.6);pointer-events:none}
+#where,#hover{position:fixed;pointer-events:none;text-shadow:0 1px 3px #000}
+#where:empty{display:none}
+#where{left:14px;top:12px;font-weight:600;font-size:15px;background:rgba(0,0,0,.5);padding:5px 10px;border-radius:8px}
+#where small{font-weight:400;color:#e4d6c0;margin-left:6px}
+#hover{left:50%;bottom:34px;transform:translateX(-50%);max-width:90vw;text-align:center;background:rgba(0,0,0,.62);padding:7px 14px;border-radius:10px}
+#hover small{display:block;color:#e4d6c0}
+#hover:empty{display:none}
+#help{position:fixed;right:14px;top:12px;font-size:12px;color:#e4d6c0;background:rgba(0,0,0,.5);padding:5px 10px;border-radius:8px;pointer-events:none}
+#load{position:fixed;inset:0;display:grid;place-items:center;background:#14110f;z-index:30;font-size:18px;text-align:center}
+#menu{position:fixed;inset:0;display:grid;place-items:center;background:rgba(14,9,5,.72);z-index:20;padding:16px}
+#menu[hidden],#info[hidden],#load[hidden],#touch[hidden]{display:none}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:16px;padding:22px;width:min(620px,100%);max-height:94vh;overflow:auto}
+.card h1{font:400 44px/1 "Bebas Neue",Impact,"Arial Narrow",sans-serif;letter-spacing:.06em;margin:0 0 4px;color:var(--ac)}
+.card h3{margin:14px 0 6px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu)}
+.card p{margin:6px 0;color:var(--mu)}
+.card kbd{background:var(--bd);border-radius:5px;padding:1px 6px;font-size:12px;color:var(--tx)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{padding:6px 12px;border-radius:99px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:inherit;font-size:13px;cursor:pointer}
+.chip.on{background:var(--ac);color:var(--acx);border-color:var(--ac)}
+.card input{width:100%;padding:9px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font:inherit}
+#res{margin-top:6px}
+.hit{display:block;width:100%;text-align:left;padding:8px 10px;border:0;border-top:1px solid var(--bd);background:none;color:var(--tx);font:inherit;cursor:pointer}
+.hit:hover{background:var(--bd)}.hit small{color:var(--mu)}
+#info{position:fixed;inset:0;display:grid;place-items:center;background:rgba(14,9,5,.6);z-index:25;padding:16px}
+#info .card{display:flex;gap:18px;flex-wrap:wrap;position:relative}
+#info img{width:150px;height:auto;align-self:flex-start;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.5)}
+#info .t{flex:1;min-width:200px}
+#info h2{font:400 32px/1.05 "Bebas Neue",Impact,"Arial Narrow",sans-serif;letter-spacing:.03em;margin:0 30px 4px 0}
+.tag{display:inline-block;margin:0 6px 6px 0;padding:2px 9px;border-radius:99px;border:1px solid var(--bd);font-size:12px}
+#info .x{position:absolute;top:10px;right:14px;border:0;background:none;color:var(--mu);font-size:22px;cursor:pointer}
+#touch{position:fixed;left:14px;bottom:18px;display:flex;flex-direction:column;gap:10px;z-index:10}
+#touch button{width:62px;height:62px;border-radius:50%;border:0;background:rgba(255,255,255,.2);color:#fff;font-size:24px}
+#menub{position:fixed;right:14px;bottom:18px;z-index:10;display:none}
+body.touch #menub{display:block}
+</style>
+</head>
+<body>
+<div id="load">Preparo il soggiorno…</div>
+<div id="cross"></div><div id="where"></div><div id="hover"></div>
+<div id="help">WASD / frecce: muoviti · Shift: corri · Mouse: guarda · Clic: apri film · Rotella: zoom · Ctrl+↑/↓: altezza · Ctrl+←/→: lato · V: vista · Esc: menu</div>
+<div id="touch" hidden><button id="fw">▲</button><button id="bk">▼</button></div>
+<button class="btn sec" id="menub">☰ Menu</button>
+<div id="menu" hidden><div class="card">
+  <h1>Il mio soggiorno</h1>
+  <p id="intro"></p>
+  <h3>Vista della libreria</h3>
+  <div class="chips" id="views"></div>
+  <p style="font-size:13px">Anche la TV e il telecomando sul tavolino aprono questo menu. <kbd>V</kbd> lo apre in qualsiasi momento.</p>
+  <details id="cust"><summary style="cursor:pointer;margin-top:12px;font-weight:600;color:var(--ac)">✨ Vista personalizzata</summary>
+    <h3>Cerca film</h3><input id="cqf" type="search" placeholder="Titolo… (clic per aggiungere)" autocomplete="off"><div id="cqfr"></div>
+    <h3>Cerca regista</h3><input id="cqd" type="search" placeholder="Regista… (clic per aggiungere)" autocomplete="off"><div id="cqdr"></div>
+    <div class="chips" id="cpicks" style="margin-top:8px"></div>
+    <h3>Iniziale del regista</h3><div class="chips" id="cl"></div>
+    <h3>Visti</h3><div class="chips" data-k="visto"><button class="chip on" data-val="">Tutti</button><button class="chip" data-val="1">Visti</button><button class="chip" data-val="0">Non visti</button></div>
+    <h3>Catalogo</h3><div class="chips" data-k="cat"><button class="chip on" data-val="">Tutti</button><button class="chip" data-val="1">In catalogo</button><button class="chip" data-val="0">Non in catalogo</button></div>
+    <h3>Formato</h3><div class="chips" id="cf"></div>
+    <h3>Genere</h3><div class="chips" id="cg"></div>
+    <div class="row"><button class="btn" id="capply">Mostra in libreria (<span id="cn">0</span>)</button><button class="btn sec" id="creset">Azzera</button></div>
+  </details>
+  <div class="row"><button class="btn" id="go">▶ Entra nella stanza</button><a class="btn sec" href="bingbuster.html">← Torna al catalogo</a></div>
+  <h3>Cerca un film</h3>
+  <input id="q" type="search" placeholder="Titolo o regista…" autocomplete="off">
+  <div id="res"></div>
+  <p style="font-size:13px"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o frecce per muoverti, <kbd>Shift</kbd> per correre, mouse per guardare, clic su una custodia per aprirla, rotella per lo zoom, <kbd>Ctrl</kbd>+<kbd>↑</kbd>/<kbd>↓</kbd> per alzare o abbassare lo sguardo, <kbd>Ctrl</kbd>+<kbd>←</kbd>/<kbd>→</kbd> per spostarti di lato, <kbd>Esc</kbd> per questo menu.</p>
+</div></div>
+<div id="info" hidden><div class="card"><button class="x" id="ix" aria-label="Chiudi">✕</button><img id="ii" alt=""><div class="t"><h2 id="it"></h2><p id="im"></p><p id="ig"></p><p id="ip" style="color:var(--tx)"></p><div class="row"><a class="btn" id="iy" target="_blank" rel="noopener">▶ Trailer</a><button class="btn sec" id="ic">Continua a girare</button></div></div></div></div>
+
+<script type="module">
+import * as THREE from "./three.min.js";
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const cmpIt = (a, b) => a.localeCompare(b, "it");
+const TOUCH = matchMedia("(pointer:coarse)").matches && "ontouchstart" in window;
+if (TOUCH) { document.body.classList.add("touch"); $("#touch").hidden = false; $("#help").hidden = true; $("#cross").style.display = "none"; }
+
+/* ---------- dati (stessi file della pagina del catalogo) ---------- */
+let FILMS;
+try { FILMS = await (await fetch("films.json")).json(); }
+catch (e) { $("#load").innerHTML = "Non riesco a leggere films.json.<br>Avvia il server con <code>python server.py</code> e apri http://localhost:8000/soggiorno.html"; throw e; }
+try { const r = await fetch("edits.json"); if (r.ok) { const E = await r.json(); FILMS.forEach(f => Object.assign(f, E[f.id] || {})); } } catch (e) {}
+let ORD = []; try { const r = await fetch("settings.json"); if (r.ok) ORD = (await r.json()).ordine_generi || []; } catch (e) {}
+const GR = "@regista";
+const gOf = f => (f.generi && f.generi[0]) || "Altro";
+const hue = s => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) % 360; return h; };
+const barOrder = () => { const p = g => { const i = ORD.indexOf(g); return i >= 0 ? i : g === "Tutti" ? -2 : g === GR ? -1 : 1e9; }; return ["Tutti", GR, ...new Set(FILMS.map(gOf))].sort((a, b) => p(a) - p(b) || cmpIt(a, b)); };
+function dirOf(f) {            // primo regista: "Cognome, Nome" (stessa logica del catalogo)
+  const p = (f.regista || "").split(",").map(x => x.trim()).filter(Boolean);
+  if (!p.length) return { sur: "", name: "", label: "" };
+  let sur = p[0], name = ""; if (p.length > 1 && !/\.$/.test(sur)) { name = p[1]; if (name.endsWith(" " + sur)) name = name.slice(0, -sur.length - 1); }
+  return { sur, name, label: name ? sur + ", " + name : sur };
+}
+
+/* ---------- scena ---------- */
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x04060d);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 60);
+camera.rotation.order = "YXZ";
+scene.add(new THREE.HemisphereLight(0x7088c8, 0x2a1c12, 0.75));
+const moon = new THREE.DirectionalLight(0x9db4ee, 0.35); moon.position.set(-4, 6, 8); scene.add(moon);
+for (const lx of [-4, 0.5, 5]) { const l = new THREE.PointLight(0xffd29a, 1.2, 7, 1.4); l.position.set(lx, 2.7, -1.7); scene.add(l); }   // luci della libreria
+const roomL = new THREE.PointLight(0xffc890, 0.9, 10, 1.3); roomL.position.set(0.5, 2.9, 0.5); scene.add(roomL);
+const moonL = new THREE.PointLight(0x9bb5ff, 0.9, 5.5, 1.5); moonL.position.set(-4, 2.2, 2.9); scene.add(moonL);
+const tvL = new THREE.PointLight(0x86a2ff, 0.9, 5.5, 1.5); tvL.position.set(0.5, 1.7, 2.5); scene.add(tvL);
+
+/* misure (metri) */
+const RZ = 3.4, CH = 3.1;                       // mezza larghezza, mezza profondità, altezza della stanza
+const ZW = -RZ;                                           // parete della libreria (nord)
+const SLOT = 0.145, TP = 0.235, BASE = 0.15, NT = 11, W = 0.135, D = 0.014, HC = { dvd: 0.19, bd: 0.172 };
+const COLS = Math.max(72, Math.ceil((FILMS.length + 60) * 1.1 / NT));   // se i film aumentano la libreria si allarga da sola
+const BCW = COLS * SLOT + 0.3;                            // larghezza libreria
+const RX = Math.max(6.4, BCW / 2 + 0.9);                   // e la stanza con lei
+
+const boxG = new THREE.BoxGeometry(1, 1, 1);
+const mats = {};
+const lam = (k, c, o = {}) => (mats[k] ??= new THREE.MeshLambertMaterial({ color: c, ...o }));
+function box(m, x, y, z, w, h, d, ry = 0, parent = scene) { const o = new THREE.Mesh(boxG, m); o.scale.set(w, h, d); o.position.set(x, y, z); o.rotation.y = ry; parent.add(o); return o; }
+function canvasTex(w, h, draw, rep) { const c = document.createElement("canvas"); c.width = w; c.height = h; draw(c.getContext("2d"), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]); } return t; }
+const rnd = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+
+/* pavimento in parquet, pareti, soffitto */
+const floorT = canvasTex(512, 512, (x, w, h) => {
+  for (let r = 0; r < 8; r++) { const off = (r % 2) * 128; for (let k = -1; k < 3; k++) { const L = 256, x0 = k * L + off; x.fillStyle = `hsl(${26 + rnd() * 6} ${45 + rnd() * 10}% ${34 + rnd() * 9}%)`; x.fillRect(x0, r * 64, L, 64); x.strokeStyle = "rgba(40,20,5,.55)"; x.lineWidth = 2; x.strokeRect(x0, r * 64, L, 64);
+    x.strokeStyle = "rgba(60,30,10,.18)"; x.lineWidth = 1; for (let i = 0; i < 4; i++) { const yy = r * 64 + 10 + rnd() * 44; x.beginPath(); x.moveTo(x0 + 4, yy); x.lineTo(x0 + L - 4, yy + (rnd() - .5) * 4); x.stroke(); } } }
+}, [RX, RZ]);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(2 * RX, 2 * RZ), new THREE.MeshLambertMaterial({ map: floorT })); floor.rotation.x = -Math.PI / 2; scene.add(floor);
+const ceil = new THREE.Mesh(new THREE.PlaneGeometry(2 * RX, 2 * RZ), new THREE.MeshLambertMaterial({ color: 0xe8d9bd })); ceil.rotation.x = Math.PI / 2; ceil.position.y = CH; scene.add(ceil);
+const wallM = lam("wall", 0xe2c79a, { side: THREE.DoubleSide });
+const wallPlane = (w, h, x, y, z, ry, m = wallM) => { const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), m); p.position.set(x, y, z); p.rotation.y = ry; scene.add(p); return p; };
+wallPlane(2 * RX, CH, 0, CH / 2, -RZ, 0);                 // nord (dietro la libreria)
+wallPlane(2 * RZ, CH, RX, CH / 2, 0, Math.PI / 2);         // est
+wallPlane(2 * RZ, CH, -RX, CH / 2, 0, Math.PI / 2, lam("wallS", 0xb89a74, { side: THREE.DoubleSide })); // ovest
+/* sud con apertura per la finestra */
+const WIN = { x0: -RX + 0.8, x1: -RX + 4.0, y0: 0.8, y1: 2.45 };
+wallPlane(WIN.x0 + RX, CH, (-RX + WIN.x0) / 2, CH / 2, RZ, 0);
+wallPlane(RX - WIN.x1, CH, (RX + WIN.x1) / 2, CH / 2, RZ, 0);
+wallPlane(WIN.x1 - WIN.x0, WIN.y0, (WIN.x0 + WIN.x1) / 2, WIN.y0 / 2, RZ, 0);
+wallPlane(WIN.x1 - WIN.x0, CH - WIN.y1, (WIN.x0 + WIN.x1) / 2, (CH + WIN.y1) / 2, RZ, 0);
+/* battiscopa */
+const baseM = lam("base", 0xf3ead8);
+box(baseM, 0, 0.07, RZ - 0.01, 2 * RX, 0.14, 0.03); box(baseM, RX - 0.01, 0.07, 0, 0.03, 0.14, 2 * RZ); box(baseM, -RX + 0.01, 0.07, 0, 0.03, 0.14, 2 * RZ);
+
+/* ---------- libreria: grande mobile sulla parete nord ---------- */
+const woodD = lam("woodD", 0x5a3a22), woodM = lam("woodM", 0x7b5232), woodL = lam("woodL", 0xa87b4f);
+const BH = BASE + NT * TP + 0.1;
+box(woodD, 0, BH / 2, ZW + 0.03, BCW, BH, 0.04);                                        // schienale
+box(woodD, -BCW / 2 + 0.025, BH / 2, ZW + 0.19, 0.05, BH, 0.34); box(woodD, BCW / 2 - 0.025, BH / 2, ZW + 0.19, 0.05, BH, 0.34);
+box(woodD, 0, 0.07, ZW + 0.2, BCW, 0.14, 0.38);                                         // zoccolo
+for (let k = 0; k <= NT; k++) box(woodM, 0, BASE + k * TP - 0.015, ZW + 0.19, BCW - 0.1, 0.03, 0.34);
+box(woodD, 0, BH - 0.01, ZW + 0.2, BCW + 0.1, 0.07, 0.42);                              // cornice
+
+/* ---------- finestra con vista sul giardino ---------- */
+{
+  const sky = canvasTex(1024, 640, (x, w, h) => {
+    const g = x.createLinearGradient(0, 0, 0, h * .62); g.addColorStop(0, "#050a1f"); g.addColorStop(.7, "#14234a"); g.addColorStop(1, "#2b3a63"); x.fillStyle = g; x.fillRect(0, 0, w, h);
+    for (let i = 0; i < 160; i++) { x.fillStyle = `rgba(255,255,240,${.3 + rnd() * .7})`; const r = rnd() < .1 ? 2 : 1; x.fillRect(rnd() * w, rnd() * h * .55, r, r); }
+    const mg = x.createRadialGradient(830, 150, 10, 830, 150, 120); mg.addColorStop(0, "rgba(220,230,255,.5)"); mg.addColorStop(1, "rgba(220,230,255,0)"); x.fillStyle = mg; x.fillRect(650, 0, 360, 330);
+    x.fillStyle = "#f3f0dc"; x.beginPath(); x.arc(830, 150, 38, 0, 7); x.fill(); x.fillStyle = "#14234a"; x.beginPath(); x.arc(846, 142, 33, 0, 7); x.fill();
+    x.fillStyle = "rgba(160,175,215,.25)"; [[200, 110, 90], [560, 80, 70]].forEach(([cx, cy, r]) => { for (let i = 0; i < 4; i++) { x.beginPath(); x.ellipse(cx + i * r * .45 - r, cy + (i % 2) * 8, r * .6, r * .26, 0, 0, 7); x.fill(); } });
+    x.fillStyle = "#0e1a2e"; x.beginPath(); x.moveTo(0, h * .55); for (let i = 0; i <= 8; i++) x.lineTo(i * w / 8, h * (.46 + .06 * Math.sin(i * 1.7))); x.lineTo(w, h * .62); x.lineTo(0, h * .62); x.fill();
+    x.fillStyle = "#ffd98a"; [[300, .5], [318, .51], [610, .49]].forEach(([lx, ly]) => x.fillRect(lx, h * ly, 5, 5));
+    x.fillStyle = "#14301f"; x.fillRect(0, h * .6, w, h * .4); x.fillStyle = "#0f2418"; x.beginPath(); x.moveTo(0, h * .75); x.quadraticCurveTo(w * .4, h * .66, w, h * .74); x.lineTo(w, h); x.lineTo(0, h); x.fill();
+    [[120, .7, 70], [330, .66, 52], [700, .68, 62], [920, .72, 78]].forEach(([tx, ty, s]) => { x.fillStyle = "#1a120b"; x.fillRect(tx - 6, h * ty, 12, s * .7); x.fillStyle = "#0a1a10"; for (let i = 0; i < 3; i++) { x.beginPath(); x.arc(tx + (i - 1) * s * .28, h * ty - i % 2 * 16, s * .5, 0, 7); x.fill(); } });
+    x.fillStyle = "#4a5170"; x.beginPath(); x.moveTo(w * .42, h); x.quadraticCurveTo(w * .5, h * .78, w * .55, h * .66); x.lineTo(w * .57, h * .66); x.quadraticCurveTo(w * .56, h * .8, w * .72, h); x.fill();
+    x.fillStyle = "#ffe9a8"; x.shadowColor = "#ffcf5a"; x.shadowBlur = 12; for (let i = 0; i < 14; i++) { x.beginPath(); x.arc(rnd() * w, h * (.66 + rnd() * .3), 2, 0, 7); x.fill(); }   // lucciole
+  });
+  const out = new THREE.Mesh(new THREE.PlaneGeometry(6, 3.5), new THREE.MeshBasicMaterial({ map: sky, fog: false })); out.rotation.y = Math.PI; out.position.set((WIN.x0 + WIN.x1) / 2, 1.7, RZ + 0.9); scene.add(out);
+  const fr = lam("frame", 0xfaf3e6), ww = WIN.x1 - WIN.x0, wh = WIN.y1 - WIN.y0, cx = (WIN.x0 + WIN.x1) / 2, cy = (WIN.y0 + WIN.y1) / 2;
+  box(fr, cx, WIN.y0 - 0.02, RZ - 0.1, ww + 0.3, 0.06, 0.28); box(fr, cx, WIN.y1 + 0.03, RZ - 0.03, ww + 0.12, 0.08, 0.14);
+  box(fr, WIN.x0 - 0.03, cy, RZ - 0.03, 0.08, wh, 0.14); box(fr, WIN.x1 + 0.03, cy, RZ - 0.03, 0.08, wh, 0.14);
+  box(fr, cx, cy, RZ - 0.02, 0.05, wh, 0.08); box(fr, cx, cy + 0.1, RZ - 0.02, ww, 0.05, 0.08);
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(ww, wh), new THREE.MeshBasicMaterial({ color: 0x9bb5ff, transparent: true, opacity: 0.08, depthWrite: false })); glass.rotation.y = Math.PI; glass.position.set(cx, cy, RZ - 0.01); scene.add(glass);
+  const cur = lam("curt", 0x7a2c20);                       // tende
+  for (const sx of [WIN.x0 - 0.35, WIN.x1 + 0.35]) for (let i = 0; i < 4; i++) box(cur, sx + (i - 1.5) * 0.12, 1.45, RZ - 0.16, 0.1, 2.9, 0.12 + (i % 2) * 0.03);
+  box(lam("rod", 0x3a2a1c), cx, 2.92, RZ - 0.16, ww + 1.8, 0.04, 0.04);
+}
+
+/* ---------- caminetto (parete ovest) ---------- */
+const stoneT = canvasTex(256, 256, (x, w, h) => { x.fillStyle = "#4a3f38"; x.fillRect(0, 0, w, h); for (let r = 0; r < 6; r++) { let px = -(r % 2) * 20; while (px < w) { const sw = 40 + rnd() * 40; x.fillStyle = `hsl(${22 + rnd() * 10} ${8 + rnd() * 10}% ${38 + rnd() * 18}%)`; x.fillRect(px + 2, r * 43 + 2, sw - 4, 39); px += sw; } } }, [1.4, 3]);
+const stoneM = new THREE.MeshLambertMaterial({ map: stoneT });
+const FX = -RX + 0.25;
+box(stoneM, FX, CH / 2, -1.1, 0.5, CH, 0.6); box(stoneM, FX, CH / 2, 0.7, 0.5, CH, 0.6);        // montanti
+box(stoneM, FX, (0.97 + CH) / 2, -0.2, 0.5, CH - 0.97, 1.2);                                      // cappa
+box(woodD, FX + 0.05, 1.04, -0.2, 0.62, 0.07, 2.0);                                               // mensola
+box(lam("hearth", 0x3b3430), FX + 0.2, 0.03, -0.2, 0.95, 0.06, 1.85);                            // focolare
+box(lam("fb", 0x120d0a), -RX + 0.03, 0.55, -0.2, 0.05, 1.1, 1.2);                               // fondo del camino
+for (const [dz, r] of [[-0.35, 0.07], [-0.05, 0.08], [0.2, 0.07]]) { const lg = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.7, 10), lam("log", 0x4a2c17)); lg.rotation.x = Math.PI / 2; lg.position.set(-RX + 0.3, 0.14 + (dz === -0.05 ? 0.1 : 0), dz); scene.add(lg); }
+const flameT = canvasTex(128, 256, (x, w, h) => { const g = x.createRadialGradient(64, 190, 6, 64, 150, 120); g.addColorStop(0, "rgba(255,245,170,1)"); g.addColorStop(.35, "rgba(255,160,40,.9)"); g.addColorStop(.75, "rgba(220,60,10,.35)"); g.addColorStop(1, "rgba(120,10,0,0)"); x.fillStyle = g; x.beginPath(); x.moveTo(64, 6); x.bezierCurveTo(120, 90, 130, 170, 64, 250); x.bezierCurveTo(0, 170, 8, 90, 64, 6); x.fill(); });
+const flames = [[-0.45, 0.55], [-0.2, 0.75], [0.1, 0.62]].map(([dz, h], i) => {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.4, h), new THREE.MeshBasicMaterial({ map: flameT, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false }));
+  m.rotation.y = Math.PI / 2; m.position.set(-RX + 0.32, 0.2 + h / 2, dz); m.userData = { h, i, y0: 0.2 + h / 2 }; scene.add(m); return m;
+});
+const fireLight = new THREE.PointLight(0xff7a2a, 3, 7.5, 1.6); fireLight.position.set(-RX + 0.7, 0.6, -0.2); scene.add(fireLight);
+
+/* ---------- arredo: tappeto, divano, poltrona, tavolino, console con TV ---------- */
+const SOFA = { x: 0.5, z: 0.35 };
+{
+  const rug = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 3.2), new THREE.MeshLambertMaterial({ map: canvasTex(512, 384, (x, w, h) => {
+    x.fillStyle = "#7c2f26"; x.fillRect(0, 0, w, h); x.fillStyle = "#e9d6b0"; x.fillRect(18, 18, w - 36, h - 36); x.fillStyle = "#7c2f26"; x.fillRect(30, 30, w - 60, h - 60);
+    x.strokeStyle = "#d9a441"; x.lineWidth = 4; for (let i = 0; i < 6; i++) { const m = 50 + i * 24; x.strokeRect(m, m * .75, w - 2 * m, h - 1.5 * m); }
+    x.fillStyle = "#e9d6b0"; for (let i = 0; i < 6; i++) { x.beginPath(); x.moveTo(w / 2, 90 + i * 8); x.lineTo(w / 2 + 40 - i * 4, h / 2); x.lineTo(w / 2, h - 90 - i * 8); x.lineTo(w / 2 - 40 + i * 4, h / 2); x.fill(); } }) }));
+  rug.rotation.x = -Math.PI / 2; rug.position.set(SOFA.x, 0.012, 1.0); scene.add(rug);
+  const fab = lam("sofa", 0x9b4a2f), fab2 = lam("sofa2", 0xb25e3c), legM = lam("leg", 0x2a1b10);
+  function sofa(g, w) {
+    box(fab, 0, 0.28, 0, w, 0.36, 0.95, 0, g); box(fab, 0, 0.78, -0.36, w, 0.62, 0.24, 0, g);
+    const n = Math.round(w / 0.8), cw = (w - 0.5) / n;
+    for (let i = 0; i < n; i++) { const x = -(w - 0.5) / 2 + cw * (i + 0.5); box(fab2, x, 0.54, 0.06, cw - 0.03, 0.17, 0.78, 0, g); box(fab2, x, 0.86, -0.18, cw - 0.03, 0.5, 0.18, 0, g); }
+    box(fab, -(w - 0.24) / 2, 0.5, 0.02, 0.24, 0.52, 0.95, 0, g); box(fab, (w - 0.24) / 2, 0.5, 0.02, 0.24, 0.52, 0.95, 0, g);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(legM, sx * (w / 2 - 0.1), 0.05, sz * 0.4, 0.07, 0.1, 0.07, 0, g);
+  }
+  const sg = new THREE.Group(); sg.position.set(SOFA.x, 0, SOFA.z); sofa(sg, 2.4); scene.add(sg);
+  const ag = new THREE.Group(); ag.position.set(-RX + 2.1, 0, 1.0); ag.rotation.y = -1.15; sofa(ag, 1.1); scene.add(ag);
+  box(lam("cush", 0xe3b04b), SOFA.x - 0.8, 0.72, SOFA.z + 0.02, 0.4, 0.4, 0.12, 0.3); box(lam("cush2", 0x3e6b78), SOFA.x + 0.85, 0.72, SOFA.z + 0.02, 0.4, 0.4, 0.12, -0.3);
+  /* tavolino e telecomando */
+  const tw = lam("tw", 0x6c4428), TB = { x: SOFA.x, z: 1.55 };
+  box(tw, TB.x, 0.4, TB.z, 1.3, 0.05, 0.7); for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(woodD, TB.x + sx * 0.58, 0.2, TB.z + sz * 0.28, 0.06, 0.4, 0.06);
+  box(lam("book1", 0x2f5d62), TB.x - 0.35, 0.45, TB.z + 0.05, 0.28, 0.035, 0.2); box(lam("book2", 0xc2892b), TB.x - 0.35, 0.48, TB.z + 0.05, 0.24, 0.03, 0.17, 0.3);
+  const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.035, 0.09, 14), lam("mug", 0xf6eee0)); mug.position.set(TB.x + 0.35, 0.475, TB.z - 0.1); scene.add(mug);
+  var remote = box(lam("remote", 0x1c1c1f), TB.x + 0.05, 0.44, TB.z + 0.12, 0.17, 0.035, 0.06, 0.25);
+  const led = box(new THREE.MeshBasicMaterial({ color: 0xff4a2a }), TB.x + 0.1, 0.465, TB.z + 0.1, 0.015, 0.01, 0.015, 0.25); void led;
+  remote.scale.set(0.2, 0.06, 0.1); remote.userData.special = "views";          // un po' più grande per poterlo puntare
+  /* console + televisione */
+  const TV = { x: 0.5, y: 1.62, w: 2.6, h: 1.46 };
+  box(woodM, TV.x, 0.27, RZ - 0.25, 2.9, 0.54, 0.45); box(woodD, TV.x, 0.56, RZ - 0.25, 2.96, 0.04, 0.5);
+  for (const sx of [-1, 1]) box(woodD, TV.x + sx * 0.7, 0.27, RZ - 0.02, 0.02, 0.4, 0.01);
+  box(lam("tvf", 0x0c0c0e), TV.x, TV.y, RZ - 0.04, TV.w + 0.08, TV.h + 0.08, 0.06);
+  var tvCanvas = document.createElement("canvas"); tvCanvas.width = 1024; tvCanvas.height = 576;
+  var tvTex = new THREE.CanvasTexture(tvCanvas); tvTex.colorSpace = THREE.SRGBColorSpace; tvTex.anisotropy = 8;
+  var tvScreen = new THREE.Mesh(new THREE.PlaneGeometry(TV.w, TV.h), new THREE.MeshBasicMaterial({ map: tvTex, fog: false }));
+  tvScreen.rotation.y = Math.PI; tvScreen.position.set(TV.x, TV.y, RZ - 0.075); tvScreen.userData.special = "views"; scene.add(tvScreen);
+  /* piante, lampada, quadri */
+  const pot = lam("pot", 0xb4643a), leaf = lam("leaf", 0x2f7a3e), leaf2 = lam("leaf2", 0x3f9a4c);
+  function plant(x, z, s) { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.2 * s, 0.15 * s, 0.4 * s, 14), pot); p.position.set(x, 0.2 * s, z); scene.add(p); for (let i = 0; i < 6; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry((0.26 - i * 0.02) * s, 10, 8), i % 2 ? leaf : leaf2); b.position.set(x + Math.sin(i * 2.1) * 0.16 * s, (0.62 + i * 0.16) * s, z + Math.cos(i * 2.1) * 0.16 * s); scene.add(b); } }
+  plant(RX - 0.7, 2.7, 1.5); plant(-RX + 0.5, 2.8, 1.2); plant(RX - 0.5, -2.2, 1.3);
+  const lampM = lam("lampP", 0x2d2d2d); box(lampM, RX - 0.6, 0.9, 0.9, 0.04, 1.8, 0.04); box(lampM, RX - 0.6, 0.02, 0.9, 0.35, 0.04, 0.35);
+  const shade = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.3, 0.32, 18, 1, true), new THREE.MeshBasicMaterial({ color: 0xffe2a8, side: THREE.DoubleSide })); shade.position.set(RX - 0.6, 1.85, 0.9); scene.add(shade);
+  const lampL = new THREE.PointLight(0xffd9a0, 1.4, 6.5, 1.5); lampL.position.set(RX - 0.6, 1.7, 0.9); scene.add(lampL);
+  const art = (x, y, z, ry, w, h, seed) => {
+    const t = canvasTex(256, Math.round(256 * h / w), (c, cw, ch) => { c.fillStyle = "#f2e8d5"; c.fillRect(0, 0, cw, ch); for (let i = 0; i < 7; i++) { c.fillStyle = `hsl(${(seed * 47 + i * 53) % 360} 55% ${40 + rnd() * 25}%)`; c.fillRect(rnd() * cw * .7, rnd() * ch * .7, 40 + rnd() * cw * .45, 30 + rnd() * ch * .4); } });
+    const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; scene.add(g);
+    box(lam("fr2", 0x2b1b10), 0, 0, 0, w + 0.1, h + 0.1, 0.04, 0, g);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: t, color: 0x9a9a9a, fog: false })); p.position.z = 0.025; g.add(p);
+  };
+  art(RX - 0.03, 1.7, -1.3, -Math.PI / 2, 0.9, 0.7, 1); art(RX - 0.03, 1.7, 0.1, -Math.PI / 2, 0.6, 0.8, 2); art(RX - 0.03, 1.7, 1.4, -Math.PI / 2, 0.9, 0.6, 3);
+  art(3.9, 1.75, RZ - 0.03, Math.PI, 0.9, 1.2, 4);
+}
+
+/* ---------- schermo della TV ---------- */
+const tvImgs = new Map();
+function drawTV(c) {
+  const x = tvCanvas.getContext("2d"), w = 1024, h = 576;
+  const g = x.createLinearGradient(0, 0, w, h); g.addColorStop(0, "#1b2441"); g.addColorStop(1, "#0b0f1e"); x.fillStyle = g; x.fillRect(0, 0, w, h);
+  x.textBaseline = "top";
+  if (!c) {
+    x.fillStyle = "#ffc83d"; x.font = "700 86px Impact,'Arial Narrow',sans-serif"; x.fillText("BINGBUSTER", 56, 70);
+    x.fillStyle = "#e9ecff"; x.font = "600 44px system-ui,sans-serif"; x.fillText("Vista: " + viewLabel(VIEW), 60, 200);
+    x.fillStyle = "#9aa0c4"; x.font = "34px system-ui,sans-serif"; x.fillText(shownCount + " film in libreria", 60, 262);
+    x.fillText("Premi V, o clicca TV e telecomando,", 60, 400); x.fillText("per cambiare vista.", 60, 446);
+  } else {
+    const f = c.film; x.fillStyle = "#ffc83d"; x.font = "600 26px system-ui,sans-serif"; x.fillText("ORA SULLO SCAFFALE", 56, 36);
+    const im = tvImgs.get(f.id);
+    if (im && im.complete && im.naturalWidth) x.drawImage(im, 56, 84, 300, 450);
+    else { x.fillStyle = `hsl(${hue(f.titolo)} 55% 32%)`; x.fillRect(56, 84, 300, 450); if (!im) { const i = new Image(); i.onload = () => { if (hovered && hovered.film === f) drawTV(hovered); }; i.src = `posters/${f.id}.jpg?v=${f._v || 0}`; tvImgs.set(f.id, i); } }
+    x.fillStyle = "#fff"; x.font = "700 46px system-ui,sans-serif";
+    const words = f.titolo.split(" "); let line = "", y = 90;
+    for (const wd of words) { const t = line ? line + " " + wd : wd; if (x.measureText(t).width > 590 && line) { x.fillText(line, 400, y); y += 54; line = wd; } else line = t; }
+    x.fillText(line, 400, y); y += 70; x.fillStyle = "#cdd2f5"; x.font = "32px system-ui,sans-serif";
+    x.fillText(f.regista || "", 400, y); y += 44; x.fillText(`${f.anno} · ${f.formato || ""}${f.durata ? " · " + f.durata + " min" : ""}`, 400, y); y += 44;
+    x.fillStyle = "#ffc83d"; x.fillText((f.generi || []).join(" · "), 400, y);
+  }
+  tvTex.needsUpdate = true;
+}
+
+/* ---------- custodie: corpi istanziati + una faccia per film; schede divisorie ---------- */
+const bodies = { dvd: [], bd: [], out: [] }, covers = [], divs = [];
+const ZB = ZW + 0.27, ZF = ZB + D / 2 + 0.0008;
+for (const f of FILMS) {
+  const out = f.in_catalogo === false, bd = f.formato !== "DVD", h = bd ? HC.bd : HC.dvd, kind = out ? "out" : bd ? "bd" : "dvd";
+  const base = out ? new THREE.Color(0x777777) : new THREE.Color().setHSL(hue(f.titolo) / 360, 0.5, 0.36);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.012, h - 0.016), new THREE.MeshBasicMaterial({ color: base }));
+  m.visible = false; scene.add(m);
+  const c = { film: f, mesh: m, base, h, kind, out, bi: bodies[kind].length, cx: 0, cy: 1.5, s: 0, tx: 0, ty: 1.5, ts: 0, shown: false, state: 0, tex: null };
+  bodies[kind].push(c); m.userData.cover = c; covers.push(c);
+}
+const bodyMat = { dvd: new THREE.MeshLambertMaterial({ color: 0x151515 }), bd: new THREE.MeshLambertMaterial({ color: 0x0b4fae }), out: new THREE.MeshLambertMaterial({ color: 0x4a4a4a }) };
+const inst = {};
+for (const k of ["dvd", "bd", "out"]) { const im = new THREE.InstancedMesh(boxG, bodyMat[k], Math.max(1, bodies[k].length)); im.frustumCulled = false; im.count = bodies[k].length; scene.add(im); inst[k] = im; }
+const dummy = new THREE.Object3D();
+const divBodyM = lam("divb", 0x3a2a1c);
+for (let i = 0; i < 70; i++) {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(W - 0.012, 0.174), new THREE.MeshBasicMaterial({ color: 0xffffff })); m.visible = false; scene.add(m);
+  const b = new THREE.Mesh(boxG, divBodyM); b.visible = false; scene.add(b);
+  divs.push({ divider: true, mesh: m, body: b, h: 0.19, cx: 0, cy: 1.5, s: 0, tx: 0, ty: 1.5, ts: 0, label: null });
+}
+function place(c) {
+  const s = c.s, vis = s > 0.02;
+  c.mesh.visible = vis; c.mesh.position.set(c.cx, c.cy, ZF); c.mesh.scale.setScalar(Math.max(s, 0.001));
+  if (c.divider) { c.body.visible = vis; c.body.position.set(c.cx, c.cy, ZB); c.body.scale.set(W * s, c.h * s, D * s); }
+  else { dummy.position.set(c.cx, c.cy, ZB); dummy.rotation.set(0, 0, 0); dummy.scale.set(W * Math.max(s, 0.001), c.h * Math.max(s, 0.001), D * Math.max(s, 0.001)); dummy.updateMatrix(); inst[c.kind].setMatrixAt(c.bi, dummy.matrix); }
+}
+let animating = false;
+function animate(dt) {
+  if (!animating) return;
+  const k = 1 - Math.exp(-dt * 7); let any = false; const dirty = new Set();
+  for (const c of [...covers, ...divs]) {
+    if (c.cx === c.tx && c.cy === c.ty && c.s === c.ts) continue;
+    c.cx += (c.tx - c.cx) * k; c.cy += (c.ty - c.cy) * k; c.s += (c.ts - c.s) * k;
+    if (Math.abs(c.tx - c.cx) < 4e-4 && Math.abs(c.ty - c.cy) < 4e-4 && Math.abs(c.ts - c.s) < 4e-3) { c.cx = c.tx; c.cy = c.ty; c.s = c.ts; }
+    else any = true;
+    place(c); if (!c.divider) dirty.add(c.kind);
+  }
+  dirty.forEach(k => inst[k].instanceMatrix.needsUpdate = true); animating = any;
+}
+function setDivLabel(d, text) {
+  if (d.label === text) return; d.label = text;
+  const t = canvasTex(96, 144, (x, w, h) => {
+    x.fillStyle = "#3a2a1c"; x.fillRect(0, 0, w, h); x.strokeStyle = "#ffc83d"; x.lineWidth = 4; x.strokeRect(5, 5, w - 10, h - 10); x.fillStyle = "#ffc83d"; x.textAlign = "center"; x.textBaseline = "middle";
+    const T = text.toUpperCase();
+    if (T.length <= 2) { x.font = "700 80px Impact,'Arial Narrow',sans-serif"; x.fillText(T, w / 2, h / 2 + 4); }
+    else { x.save(); x.translate(w / 2, h / 2); x.rotate(-Math.PI / 2); let fs = 52; x.font = `700 ${fs}px Impact,'Arial Narrow',sans-serif`; while (x.measureText(T).width > h - 22 && fs > 12) { fs -= 2; x.font = `700 ${fs}px Impact,'Arial Narrow',sans-serif`; } x.fillText(T, 0, 4); x.restore(); }
+  });
+  if (d.mesh.material.map) d.mesh.material.map.dispose(); d.mesh.material.map = t; d.mesh.material.needsUpdate = true;
+}
+
+/* ---------- viste: l'ordine dei film sulla libreria ---------- */
+let VIEW = "Tutti", shownCount = 0, pickables = [];
+const CV = "@custom", viewLabel = v => v === "Tutti" ? "Tutti" : v === GR ? "Regista" : v === CV ? "Personalizzata" : v;
+const CUS = { letters: new Set(), visto: "", cat: "", fmt: new Set(), gen: new Set(), films: new Map(), dirs: new Map() };
+const dkey = f => { const d = dirOf(f); return d.sur ? norm(d.label) : ""; };
+const initOf = f => { const s = dirOf(f).sur; return s ? (norm(s)[0] || "#").toUpperCase().replace(/[^A-Z]/, "#") : "—"; };
+const filtersOn = () => CUS.letters.size || CUS.visto !== "" || CUS.cat !== "" || CUS.fmt.size || CUS.gen.size;
+const customFilter = () => {
+  const on = filtersOn(), picks = CUS.films.size || CUS.dirs.size; if (!on && !picks) return FILMS.slice();   // nulla scelto: tutti
+  return FILMS.filter(f => (on && (!CUS.letters.size || CUS.letters.has(initOf(f))) && (CUS.visto === "" || !!f.visto === (CUS.visto === "1")) && (CUS.cat === "" || (f.in_catalogo !== false) === (CUS.cat === "1")) && (!CUS.fmt.size || CUS.fmt.has(f.formato === "DVD" ? "DVD" : "Blu-ray")) && (!CUS.gen.size || CUS.gen.has(gOf(f)))) || CUS.films.has(f.id) || CUS.dirs.has(dkey(f)));
+};
+const cmpDir = (a, b) => { const A = dirOf(a), B = dirOf(b); return (A.sur === "" ? 1 : 0) - (B.sur === "" ? 1 : 0) || cmpIt(A.sur, B.sur) || cmpIt(A.name, B.name) || a.anno - b.anno || cmpIt(a.titolo, b.titolo); };   // regista (primo), poi anno
+function withInitials(sorted, list) { let cur = null; sorted.forEach(f => { const L = initOf(f); if (L !== cur) { cur = L; list.push({ label: L }); } list.push({ film: f }); }); }
+function buildList(view) {
+  const list = [];
+  if (view === "Tutti") {
+    const by = {}; FILMS.forEach(f => (by[gOf(f)] ??= []).push(f));
+    barOrder().filter(g => g !== "Tutti" && g !== GR && by[g]).forEach(g => { list.push({ label: g }); by[g].sort(cmpDir).forEach(f => list.push({ film: f })); });
+  } else if (view === GR) withInitials([...FILMS].sort(cmpDir), list);
+  else if (view === CV) withInitials(customFilter().sort(cmpDir), list);
+  else FILMS.filter(f => gOf(f) === view).sort(cmpDir).forEach(f => list.push({ film: f }));
+  return list;
+}
+function setView(view, snap = false) {
+  VIEW = view; const list = buildList(view), n = list.length;
+  /* blocchi: un regista = un blocco (con l'eventuale scheda divisoria davanti) che non viene spezzato tra due righe, se possibile */
+  const blocks = []; let pend = [];
+  for (const it of list) {
+    if (!it.film) { pend.push(it); continue; }
+    const k = dkey(it.film), cur = blocks[blocks.length - 1];
+    if (cur && !pend.length && cur.k === k) cur.items.push(it); else blocks.push({ k, items: [...pend, it] }), pend = [];
+  }
+  const pack = (cols, T) => { let r = 0, c = 0; const pos = []; for (const bl of blocks) { const len = bl.items.length; if (len <= cols && c > 0 && c + len > cols && cols - c <= T) { r++; c = 0; } for (let i = 0; i < len; i++) { if (c >= cols) { r++; c = 0; } pos.push([r, c]); c++; } } return { pos, rows: r + 1 }; };
+  const c0 = n > 5 * COLS ? COLS : Math.max(8, Math.min(COLS, Math.ceil(n / 5)));
+  let cols = c0, lay = pack(cols, Infinity);
+  while (lay.rows > NT && cols < COLS) lay = pack(++cols, Infinity);
+  if (lay.rows > NT) for (const T of [14, 10, 7, 5, 3, 2, 1, -1]) { cols = Math.max(COLS, Math.ceil(n / NT)); lay = pack(cols, T); if (lay.rows <= NT) break; }   // troppi film: si spezzano solo i blocchi che lascerebbero buchi grandi
+  const rows = lay.rows, top = Math.max(rows - 1, Math.min(NT - 1, 6 + Math.floor(rows / 2)));
+  covers.forEach(c => { c.shown = false; c.ts = 0; });
+  let di = 0; shownCount = 0;
+  const used = new Set();
+  blocks.flatMap(bl => bl.items).forEach((it, i) => {
+    const [r, col] = lay.pos[i], tier = top - r, x = (-cols / 2 + col + 0.5) * SLOT;
+    if (it.film) { const c = covers.find(cc => cc.film === it.film) ; c.idx = i; c.shown = true; c.ts = 1; c.tx = x; c.ty = BASE + tier * TP + 0.012 + c.h / 2; shownCount++; used.add(c); }
+    else if (di < divs.length) { const d = divs[di++]; setDivLabel(d, it.label); d.ts = 1; d.tx = x; d.ty = BASE + tier * TP + 0.012 + d.h / 2; used.add(d); }
+  });
+  divs.slice(di).forEach(d => d.ts = 0);
+  for (const c of covers) if (c.shown && c.s === 0 && !snap) { c.cx = c.tx; c.cy = c.ty - 0.0; }      // i film nuovi compaiono dal proprio posto
+  for (const d of divs) if (d.ts === 1 && d.s === 0 && !snap) { d.cx = d.tx; d.cy = d.ty; }
+  if (snap) for (const c of [...covers, ...divs]) { c.cx = c.tx; c.cy = c.ty; c.s = c.ts; place(c); }
+  if (snap) Object.values(inst).forEach(i => i.instanceMatrix.needsUpdate = true);
+  animating = true;
+  pickables = [...covers.filter(c => c.shown).map(c => c.mesh), tvScreen, remote];
+  $("#where").innerHTML = `📚 ${esc(viewLabel(view))}<small>${shownCount} film</small>`;
+  drawTV(null); setHover(null);
+  document.querySelectorAll("#views .chip").forEach(b => b.classList.toggle("on", b.dataset.v === view));
+  stream();
+}
+$("#views").innerHTML = barOrder().map(g => `<button class="chip" data-v="${esc(g)}">${esc(viewLabel(g))}</button>`).join("");
+{
+  const letters = [...new Set(FILMS.map(initOf))].sort(cmpIt), gens = barOrder().filter(g => g !== "Tutti" && g !== GR);
+  $("#cl").innerHTML = letters.map(l => `<button class="chip" data-s="letters" data-val="${esc(l)}">${esc(l)}</button>`).join("");
+  $("#cf").innerHTML = ["DVD", "Blu-ray"].map(l => `<button class="chip" data-s="fmt" data-val="${l}">${l}</button>`).join("");
+  $("#cg").innerHTML = gens.map(l => `<button class="chip" data-s="gen" data-val="${esc(l)}">${esc(l)}</button>`).join("");
+  const upd = () => { $("#cn").textContent = customFilter().length; };
+  const picks = () => { $("#cpicks").innerHTML = [...CUS.films].map(([id, f]) => `<button class="chip on" data-rm="f:${id}">🎞 ${esc(f.titolo)} ✕</button>`).join("") + [...CUS.dirs].map(([k, l]) => `<button class="chip on" data-rm="d:${esc(k)}">🎬 ${esc(l)} ✕</button>`).join(""); };
+  const dirs = new Map(); FILMS.forEach(f => { const k = dkey(f); if (k && !dirs.has(k)) dirs.set(k, dirOf(f).label); });
+  $("#cqf").oninput = e => { const q = norm(e.target.value.trim()); if (q.length < 2) { $("#cqfr").innerHTML = ""; return; }
+    const r = FILMS.filter(f => norm(f.titolo).includes(q) && !CUS.films.has(f.id)).slice(0, 8);
+    $("#cqfr").innerHTML = r.length ? r.map(f => `<button class="hit" data-id="${f.id}">${esc(f.titolo)} <small>${f.anno} · ${esc(f.regista || "")}</small></button>`).join("") : "<p>Nessun risultato.</p>"; };
+  $("#cqfr").onclick = e => { const b = e.target.closest(".hit"); if (!b) return; const f = FILMS.find(x => x.id == b.dataset.id); CUS.films.set(f.id, f); $("#cqf").value = ""; $("#cqfr").innerHTML = ""; picks(); upd(); };
+  $("#cqd").oninput = e => { const q = norm(e.target.value.trim()); if (q.length < 2) { $("#cqdr").innerHTML = ""; return; }
+    const r = [...dirs].filter(([k]) => k.includes(q) && !CUS.dirs.has(k)).slice(0, 8);
+    $("#cqdr").innerHTML = r.length ? r.map(([k, l]) => `<button class="hit" data-k="${esc(k)}">${esc(l)} <small>${FILMS.filter(f => dkey(f) === k).length} film</small></button>`).join("") : "<p>Nessun risultato.</p>"; };
+  $("#cqdr").onclick = e => { const b = e.target.closest(".hit"); if (!b) return; CUS.dirs.set(b.dataset.k, dirs.get(b.dataset.k)); $("#cqd").value = ""; $("#cqdr").innerHTML = ""; picks(); upd(); };
+  $("#cust").addEventListener("click", e => {
+    const b = e.target.closest(".chip"); if (!b) return;
+    if (b.dataset.rm) { const [t, k] = b.dataset.rm.split(":"); (t === "f" ? CUS.films : CUS.dirs).delete(t === "f" ? +k : k); picks(); upd(); return; }
+    if (b.dataset.s) { const S = CUS[b.dataset.s]; S.has(b.dataset.val) ? S.delete(b.dataset.val) : S.add(b.dataset.val); b.classList.toggle("on"); }
+    else { const k = b.parentElement.dataset.k; CUS[k] = b.dataset.val; b.parentElement.querySelectorAll(".chip").forEach(x => x.classList.toggle("on", x === b)); }
+    upd();
+  });
+  $("#capply").onclick = () => { setView(CV); enter(); };
+  $("#creset").onclick = () => { CUS.letters.clear(); CUS.fmt.clear(); CUS.gen.clear(); CUS.visto = CUS.cat = ""; CUS.films.clear(); CUS.dirs.clear(); picks(); $("#cust").querySelectorAll(".chip[data-val]").forEach(x => x.classList.toggle("on", !x.dataset.s && x.dataset.val === "")); upd(); };
+  upd();
+}
+$("#views").onclick = e => { const b = e.target.closest(".chip"); if (!b) return; setView(b.dataset.v); enter(); };
+
+/* ---------- locandine: solo vicino al visitatore ---------- */
+const TW = 128, TH = 192, LOAD_R = 9, UNLOAD_R = 12, MAX_PAR = 4;
+let inflight = 0; const queue = [];
+function titleCard(c) {
+  const cv = document.createElement("canvas"); cv.width = TW; cv.height = TH; const x = cv.getContext("2d"), h = hue(c.film.titolo);
+  const gr = x.createLinearGradient(0, 0, TW, TH); gr.addColorStop(0, `hsl(${h} 55% 40%)`); gr.addColorStop(1, `hsl(${h} 60% 18%)`); x.fillStyle = gr; x.fillRect(0, 0, TW, TH);
+  x.fillStyle = "#fff"; x.font = "700 17px system-ui,sans-serif"; x.textBaseline = "top";
+  const words = c.film.titolo.toUpperCase().split(" "); let line = "", y = 10;
+  for (const w of words) { const t = line ? line + " " + w : w; if (x.measureText(t).width > TW - 16 && line) { x.fillText(line, 8, y); y += 20; line = w; } else line = t; }
+  x.fillText(line, 8, y); x.font = "13px system-ui,sans-serif"; x.fillText(String(c.film.anno), 8, TH - 22);
+  return cv;
+}
+function applyTex(c, cv) {
+  if (c.state !== 1) return;
+  if (c.out) { const x = cv.getContext("2d"), d = x.getImageData(0, 0, cv.width, cv.height), p = d.data; for (let i = 0; i < p.length; i += 4) { const g = 0.3 * p[i] + 0.59 * p[i + 1] + 0.11 * p[i + 2]; p[i] = p[i + 1] = p[i + 2] = g; } x.putImageData(d, 0, 0); }
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
+  c.tex = t; c.mesh.material.map = t; c.mesh.material.color.set(0xe8dccb); c.mesh.material.needsUpdate = true; c.state = 2;
+}
+function loadCover(c) {
+  inflight++; c.state = 1;
+  const done = cv => { inflight--; applyTex(c, cv); pump(); };
+  const img = new Image(); img.decoding = "async";
+  img.onload = () => { const cv = document.createElement("canvas"); cv.width = TW; cv.height = TH; cv.getContext("2d").drawImage(img, 0, 0, TW, TH); done(cv); };
+  img.onerror = () => done(titleCard(c));
+  img.src = `posters/${c.film.id}.jpg?v=${c.film._v || 0}`;
+}
+function pump() { while (inflight < MAX_PAR && queue.length) { const c = queue.shift(); if (c.state === 0 && c.near && c.shown) loadCover(c); else if (c.state === 0) c.queued = false; } }
+function unload(c) { if (c.tex) { c.tex.dispose(); c.tex = null; } c.mesh.material.map = null; c.mesh.material.color.copy(c.base); c.mesh.material.needsUpdate = true; c.state = 0; c.queued = false; }
+function stream() {
+  const p = camera.position, add = [];
+  for (const c of covers) {
+    const dx = c.tx - p.x, dz = ZF - p.z, dy = (c.ty - p.y) * 0.5, d = dx * dx + dz * dz + dy * dy; c.d = d; c.near = c.shown && d < LOAD_R * LOAD_R;
+    if (c.near && c.state === 0 && !c.queued) add.push(c);
+    else if (c.state === 2 && (!c.shown || d > UNLOAD_R * UNLOAD_R)) unload(c);
+  }
+  add.sort((a, b) => a.d - b.d); add.forEach(c => { c.queued = true; queue.push(c); }); pump();
+}
+setInterval(stream, 250);
+
+/* ---------- movimento in prima persona ---------- */
+let yaw = 0, pitch = 0.12; const keys = new Set(), touchMove = { f: 0 };
+let EYE = 1.6; camera.position.set(3.2, EYE, 2.3);
+const applyLook = () => camera.rotation.set(pitch, yaw, 0, "YXZ");
+const P = 0.3, rects = [[-RX, RX, -RZ, -3.02], [SOFA.x - 1.3, SOFA.x + 1.3, SOFA.z - 0.5, SOFA.z + 0.5], [SOFA.x - 0.7, SOFA.x + 0.7, 1.2, 1.9], [-1.0, 2.0, 2.95, RZ], [-RX, -RX + 1.0, -1.7, 1.3], [-RX + 1.5, -RX + 2.7, 0.4, 1.6], [RX - 1.0, RX - 0.3, 2.3, 3.1], [-RX + 0.2, -RX + 0.8, 2.4, 3.1], [RX - 0.8, RX - 0.2, -2.6, -1.8], [RX - 0.8, RX - 0.4, 0.7, 1.1]].map(([x0, x1, z0, z1]) => ({ x0: x0 - P, x1: x1 + P, z0: z0 - P, z1: z1 + P }));
+rects[0].x0 = -RX; rects[0].x1 = RX; rects[3].z1 = RZ; rects[3].x0 = -1.0 - P;
+const inRects = (x, z) => rects.some(r => x > r.x0 && x < r.x1 && z > r.z0 && z < r.z1);
+const inRoom = (x, z) => x > -RX + 0.4 && x < RX - 0.4 && z > -RZ + 0.4 && z < RZ - 0.4;
+function step(dt) {
+  const f = (keys.has("KeyW") || keys.has("ArrowUp") ? 1 : 0) - (keys.has("KeyS") || keys.has("ArrowDown") ? 1 : 0) + touchMove.f;
+  let s = (keys.has("KeyD") ? 1 : 0) - (keys.has("KeyA") ? 1 : 0);
+  if (ctrlOn) { s += (keys.has("ArrowRight") ? 1 : 0) - (keys.has("ArrowLeft") ? 1 : 0); }                 // Ctrl + ←/→: passo laterale
+  else { if (keys.has("ArrowLeft")) yaw += 1.8 * dt; if (keys.has("ArrowRight")) yaw -= 1.8 * dt; }
+  if (!f && !s) return;
+  const v = (keys.has("ShiftLeft") || keys.has("ShiftRight") ? 3.8 : 1.9) * dt, n = Math.hypot(f, s) || 1;
+  const dx = (-Math.sin(yaw) * f + Math.cos(yaw) * s) / n * v, dz = (-Math.cos(yaw) * f - Math.sin(yaw) * s) / n * v, p = camera.position;
+  if (inRoom(p.x + dx, p.z) && !inRects(p.x + dx, p.z)) p.x += dx;
+  if (inRoom(p.x, p.z + dz) && !inRects(p.x, p.z + dz)) p.z += dz;
+}
+
+/* ---------- selezione ---------- */
+const ray = new THREE.Raycaster(); ray.far = 8;
+const ptr = new THREE.Vector2(0, 0); let hovered = null, hoverSpecial = false;
+const outline = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(W + 0.012, 1, D + 0.012)), new THREE.LineBasicMaterial({ color: 0xffffff }));
+const frameMat = new THREE.MeshBasicMaterial({ color: 0xffc83d });
+const bars = Array.from({ length: 64 }, () => { const m = new THREE.Mesh(boxG, frameMat); m.visible = false; scene.add(m); return m; });
+const labCv = document.createElement("canvas"); labCv.width = 512; labCv.height = 64;
+const labTex = new THREE.CanvasTexture(labCv); labTex.colorSpace = THREE.SRGBColorSpace;
+const labMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.2), new THREE.MeshBasicMaterial({ map: labTex, transparent: true, depthTest: false })); labMesh.visible = false; labMesh.renderOrder = 20; scene.add(labMesh);
+function hideGroup() { bars.forEach(b => b.visible = false); labMesh.visible = false; }
+function showGroup(c) {
+  hideGroup(); const k = (c.dk ??= dkey(c.film)); if (!k) return;
+  /* il blocco del regista = film consecutivi nell'ordine della libreria (anche se vanno a capo su più ripiani) */
+  const L = covers.filter(x => x.shown && (x.dk ??= dkey(x.film)) === k).sort((a, b) => a.idx - b.idx), runs = [];
+  for (const x of L) { const r = runs[runs.length - 1]; if (r && x.idx === r[r.length - 1].idx + 1) r.push(x); else runs.push([x]); }
+  const run = runs.find(r => r.includes(c)); if (!run) return;
+  const cell = x => [Math.round((x.tx / SLOT) * 2), Math.round((x.ty - BASE - 0.1) / TP)], key = (ci, ri) => ci + "," + ri;
+  const set = new Set(run.map(x => key(...cell(x)))), yc = ri => BASE + ri * TP + 0.107, hx = ci => (ci / 2) * SLOT, hw = SLOT / 2;
+  const hs = {}, vs = {};                                                       // bordi orizzontali (per riga e lato) e verticali (per x)
+  for (const x of run) {
+    const [ci, ri] = cell(x);
+    if (!set.has(key(ci, ri + 1))) (hs[ri + ".u"] ??= []).push(ci);
+    if (!set.has(key(ci, ri - 1))) (hs[ri + ".d"] ??= []).push(ci);
+    if (!set.has(key(ci - 2, ri))) (vs[(ci - 1) + ""] ??= []).push(ri);
+    if (!set.has(key(ci + 2, ri))) (vs[(ci + 1) + ""] ??= []).push(ri);
+  }
+  const t = 0.012, zf = ZW + 0.385, dz = zf - ZF, zc = (zf + ZF) / 2; let n = 0, lowest = { ri: 1e9, x0: 0, x1: 0 };
+  const put = (cx, cy, w, h) => { if (n >= bars.length) return; const m = bars[n++]; m.scale.set(w, h, dz); m.position.set(cx, cy, zc); m.visible = true; };
+  const merge = (arr, step) => { arr.sort((a, b) => a - b); const o = []; for (const v of arr) { const l = o[o.length - 1]; if (l && v - l[1] === step) l[1] = v; else o.push([v, v]); } return o; };
+  for (const [kk, arr] of Object.entries(hs)) {
+    const [ri, side] = kk.split("."), y = yc(+ri) + (side === "u" ? 1 : -1) * (TP / 2);
+    for (const [a, b] of merge(arr, 2)) { const x0 = hx(a) - hw, x1 = hx(b) + hw; put((x0 + x1) / 2, y, x1 - x0 + t, t); if (side === "d" && +ri < lowest.ri) lowest = { ri: +ri, x0, x1 }; }
+  }
+  for (const [kk, arr] of Object.entries(vs)) { const x = (+kk / 2) * SLOT; for (const [a, b] of merge(arr, 1)) { const y0 = yc(a) - TP / 2, y1 = yc(b) + TP / 2; put(x, (y0 + y1) / 2, t, y1 - y0 + t); } }
+  const text = dirOf(c.film).label, g = labCv.getContext("2d"); g.clearRect(0, 0, 512, 64); g.font = "700 34px system-ui,sans-serif";
+  const tw = Math.min(480, g.measureText(text).width + 36), x0 = 256 - tw / 2;
+  g.fillStyle = "rgba(20,12,6,.94)"; g.strokeStyle = "#ffc83d"; g.lineWidth = 3; g.beginPath(); g.roundRect(x0, 6, tw, 52, 14); g.fill(); g.stroke();
+  g.fillStyle = "#ffc83d"; g.textAlign = "center"; g.textBaseline = "middle"; g.fillText(text, 256, 33, 460); labTex.needsUpdate = true;
+  labMesh.position.set(Math.max(-BCW / 2 + 0.6, Math.min(BCW / 2 - 0.6, (lowest.x0 + lowest.x1) / 2)), yc(lowest.ri) - TP / 2 - 0.1, ZW + 0.42); labMesh.visible = true;
+}
+ outline.visible = false; scene.add(outline);
+function pick(center = true) {
+  ray.setFromCamera(center ? new THREE.Vector2(0, 0) : ptr, camera);
+  const h = ray.intersectObjects(pickables, false)[0]; if (!h) return null;
+  return h.object.userData.special ? { special: h.object.userData.special } : h.object.userData.cover;
+}
+function setHover(c) {
+  const el = $("#hover");
+  if (c && c.special) { hovered = null; if (!hoverSpecial) { hoverSpecial = true; outline.visible = false; hideGroup(); el.innerHTML = "<b>Cambia vista</b><small>clic, oppure premi V</small>"; } return; }
+  hoverSpecial = false; hovered = c;
+  if (!c) { outline.visible = false; hideGroup(); el.textContent = ""; drawTV(null); return; }
+  outline.visible = true; outline.scale.set(1, c.h + 0.012, 1); outline.position.set(c.tx, c.ty, ZB); showGroup(c);
+  el.innerHTML = `<b>${esc(c.film.titolo)}</b> (${c.film.anno})<small>${esc(c.film.regista || "")}${c.out ? " · non in catalogo" : ""}</small>`; drawTV(c);
+}
+
+/* ---------- pannelli ---------- */
+const lockOK = !TOUCH && "requestPointerLock" in renderer.domElement;
+const locked = () => document.pointerLockElement === renderer.domElement;
+let panel = false; const menu = $("#menu");
+function enter() { menu.hidden = true; if (lockOK) renderer.domElement.requestPointerLock(); }
+function showMenu() { if (panel) return; menu.hidden = false; }
+function openViews() { if (locked()) document.exitPointerLock(); else showMenu(); }
+$("#go").onclick = enter; $("#menub").onclick = showMenu;
+document.addEventListener("pointerlockchange", () => { if (locked()) menu.hidden = true; else { keys.clear(); if (!panel) showMenu(); } });
+function openInfo(c) {
+  const f = c.film; panel = true; if (locked()) document.exitPointerLock(); menu.hidden = true;
+  $("#ii").src = `posters/${f.id}.jpg?v=${f._v || 0}`; $("#ii").style.display = ""; $("#ii").onerror = () => { $("#ii").style.display = "none"; };
+  $("#it").textContent = f.titolo; $("#im").textContent = `${f.regista || ""} · ${f.anno}${f.durata ? " · " + f.durata + " min" : ""}${f.voto ? " · ★ " + f.voto : ""}`;
+  $("#ig").innerHTML = [...(f.generi || []), f.formato || "", f.visto ? "Visto" : "Da vedere", c.out ? "Non in catalogo" : ""].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join("");
+  $("#ip").textContent = f.trama || "";
+  const y = $("#iy"); y.style.display = f.trailer_youtube ? "" : "none"; if (f.trailer_youtube) y.href = "https://www.youtube.com/watch?v=" + f.trailer_youtube;
+  $("#info").hidden = false;
+}
+function closeInfo() { panel = false; $("#info").hidden = true; if (lockOK) renderer.domElement.requestPointerLock(); else if (!TOUCH) showMenu(); }
+$("#ix").onclick = $("#ic").onclick = closeInfo;
+const activate = c => { if (!c) return; if (c.special) openViews(); else openInfo(c); };
+let ctrlOn = false;
+addEventListener("keydown", e => {
+  ctrlOn = e.ctrlKey;
+  if (e.code === "Escape" && panel) { panel = false; $("#info").hidden = true; showMenu(); return; }
+  if (document.activeElement && ["INPUT", "SELECT"].includes(document.activeElement.tagName)) return;
+  if (e.ctrlKey && (e.code === "ArrowUp" || e.code === "ArrowDown")) { e.preventDefault(); if (!panel && menu.hidden) EYE = Math.max(0.4, Math.min(2.7, EYE + (e.code === "ArrowUp" ? 0.06 : -0.06))); return; }
+  if (e.code === "KeyV" && !panel) { openViews(); return; }
+  keys.add(e.code); if (e.code.startsWith("Arrow") || e.code === "Space") e.preventDefault();
+});
+addEventListener("keyup", e => { ctrlOn = e.ctrlKey; keys.delete(e.code); });
+addEventListener("blur", () => { keys.clear(); ctrlOn = false; });
+
+let dragging = false, moved = 0, last = null;
+const look = (dx, dy, k) => { yaw -= dx * k; pitch = Math.max(-1.35, Math.min(1.35, pitch - dy * k)); };
+renderer.domElement.addEventListener("mousemove", e => {
+  ptr.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
+  if (locked()) look(e.movementX, e.movementY, 0.0022);
+  else if (dragging) { look(e.movementX, e.movementY, 0.004); moved += Math.abs(e.movementX) + Math.abs(e.movementY); }
+});
+renderer.domElement.addEventListener("mousedown", e => { if (e.button !== 0) return; if (locked()) activate(pick(true)); else { dragging = true; moved = 0; } });
+addEventListener("mouseup", () => { if (dragging && moved < 6 && !panel) activate(pick(false)); dragging = false; });
+renderer.domElement.addEventListener("wheel", e => { e.preventDefault(); if (panel || !menu.hidden) return; camera.fov = Math.max(22, Math.min(90, camera.fov + e.deltaY * 0.03)); camera.updateProjectionMatrix(); }, { passive: false });
+renderer.domElement.addEventListener("touchstart", e => { const t = e.touches[0]; last = { x: t.clientX, y: t.clientY, m: 0 }; }, { passive: true });
+renderer.domElement.addEventListener("touchmove", e => { if (!last) return; const t = e.touches[0]; look(t.clientX - last.x, t.clientY - last.y, 0.005); last.m += Math.abs(t.clientX - last.x) + Math.abs(t.clientY - last.y); last.x = t.clientX; last.y = t.clientY; }, { passive: true });
+renderer.domElement.addEventListener("touchend", () => { if (last && last.m < 8 && !panel) { ptr.set(last.x / innerWidth * 2 - 1, -(last.y / innerHeight) * 2 + 1); activate(pick(false)); } last = null; });
+const hold = (id, v) => { const b = $(id); b.addEventListener("touchstart", e => { e.preventDefault(); touchMove.f = v; }); b.addEventListener("touchend", () => touchMove.f = 0); b.addEventListener("touchcancel", () => touchMove.f = 0); };
+hold("#fw", 1); hold("#bk", -1);
+
+/* ---------- ricerca: vai davanti al film ---------- */
+function teleportTo(c) {
+  if (!c.shown) setView("Tutti", true);
+  camera.position.set(Math.max(-RX + 0.8, Math.min(RX - 0.8, c.tx)), EYE, ZF + 1.1); yaw = 0; pitch = Math.atan2(c.ty - EYE, 1.1); applyLook(); stream(); setHover(c);
+}
+$("#q").oninput = e => {
+  const q = norm(e.target.value.trim()); if (q.length < 2) { $("#res").innerHTML = ""; return; }
+  const r = covers.filter(c => norm(c.film.titolo + " " + (c.film.regista || "")).includes(q)).slice(0, 10);
+  $("#res").innerHTML = r.length ? r.map(c => `<button class="hit" data-i="${covers.indexOf(c)}">${esc(c.film.titolo)} <small>${c.film.anno} · ${esc(c.film.regista || "")} · ${esc(gOf(c.film))}</small></button>`).join("") : "<p>Nessun risultato.</p>";
+};
+$("#res").onclick = e => { const b = e.target.closest(".hit"); if (!b) return; teleportTo(covers[+b.dataset.i]); $("#q").value = ""; $("#res").innerHTML = ""; enter(); };
+
+/* ---------- ciclo ---------- */
+addEventListener("resize", () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
+const clock = new THREE.Clock(); let fr = 0;
+function tick() {
+  requestAnimationFrame(tick);
+  const dt = Math.min(clock.getDelta(), 0.1), t = clock.elapsedTime;
+  if (!panel && menu.hidden) step(dt);
+  animate(dt);
+  flames.forEach(m => { const u = m.userData; m.scale.set(1 + 0.12 * Math.sin(t * 8 + u.i * 2), 1 + 0.18 * Math.sin(t * 11 + u.i * 3.1), 1); m.position.y = u.y0 + (m.scale.y - 1) * u.h / 2; });
+  fireLight.intensity = 3 + 0.5 * Math.sin(t * 9) + 0.35 * Math.sin(t * 23.7);
+  pitch = Math.max(-1.35, Math.min(1.35, pitch)); camera.position.y = EYE; applyLook();
+  if ((fr++ & 1) === 0 && !panel && menu.hidden && (locked() || !TOUCH)) { const c = pick(locked() || TOUCH); if (c && c.special) setHover(c); else if (c !== hovered || hoverSpecial) setHover(c); }
+  renderer.render(scene, camera);
+}
+$("#intro").textContent = `Una libreria con tutti i tuoi ${FILMS.length} film, in un soggiorno di notte, con il caminetto acceso. Scegli come ordinarli.`;
+setView("Tutti", true); applyLook(); $("#load").hidden = true;
+if (!TOUCH) showMenu();
+tick();
+window.__shop = { THREE, camera, covers, divs, scene, renderer, teleportTo, pick, setHover, setView, step, stream, openInfo, rects, get loaded() { return covers.filter(c => c.state === 2).length; }, get view() { return VIEW; }, get shown() { return shownCount; }, get yaw() { return yaw; }, set yaw(v) { yaw = v; }, set pitch(v) { pitch = v; }, finish() { animate(10); animate(10); animate(10); } };
+</script>
+</body>
+</html>

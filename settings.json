@@ -1,0 +1,26 @@
+{
+ "ordine_generi": [
+  "Tutti",
+  "@regista",
+  "Animazione",
+  "Avventura",
+  "Azione",
+  "Commedia",
+  "Crime",
+  "Documentario",
+  "Dramma",
+  "Famiglia",
+  "Fantascienza",
+  "Fantasy",
+  "Guerra",
+  "Horror",
+  "Mistero",
+  "Musica",
+  "Romance",
+  "Storia",
+  "televisione film",
+  "Thriller",
+  "Western",
+  "Altro"
+ ]
+}
