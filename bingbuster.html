@@ -65,6 +65,8 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 .info{flex:1;min-width:200px}
 .info h3{font:400 30px/1.05 var(--hd);letter-spacing:.03em;margin:0 28px 4px 0}
 .meta{color:var(--mu);margin:0 0 8px}
+.vd{margin:0 0 10px;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px}.vd small{color:var(--mu);width:100%}.vds{display:inline-flex;gap:3px}
+.vdi{width:74px;height:30px;padding:0 8px;border-radius:8px;border:1px solid var(--bd);background:transparent;color:var(--tx);font:inherit}.vdw{width:auto!important;padding:0 10px}.vdb{width:28px;height:28px;border-radius:8px;border:1px solid var(--bd);background:transparent;color:var(--tx);cursor:pointer;font:inherit;font-size:13px}.vdb:hover{border-color:var(--ac)}.vdb.on{background:var(--ac);color:var(--acx);border-color:var(--ac);font-weight:700}.vdn{font-weight:700;color:var(--ac)}
 .tag{display:inline-block;margin:0 6px 6px 0;padding:2px 9px;border-radius:99px;border:1px solid var(--bd);font-size:12px}
 .plot{margin:8px 0 14px}
 .acts{display:flex;gap:8px;flex-wrap:wrap}
@@ -173,10 +175,13 @@ const editPanel=f=>(selG=[...(f.generi||[])],`<div class="edit" id="ed" hidden><
 <p class="meta">Oppure cerca:</p><div class="tm"><input id="tq" value="${esc(f.titolo)}" aria-label="Titolo"><input id="ty" size="5" value="${f.anno}" aria-label="Anno"><select id="tt"><option value="movie">Film</option><option value="tv">Serie TV</option></select><button class="btn" data-tsearch>Cerca</button></div><div id="tr"></div></fieldset></div>`);
 function open(f,ed){
   cur=f;
-  $("#dl").innerHTML=`${cover(f)}<div class="info"><h3>${esc(f.titolo)}</h3><p class="meta">${esc(f.regista)} · ${f.anno}${f.durata?" · "+f.durata+" min":""}</p><p>${(f.generi||[]).map(g=>`<span class="tag">${esc(g)}</span>`).join("")}<span class="tag">${esc(f.formato||"Formato da verificare")}</span></p><p class="meta">${[f.voto?"★ "+f.voto:"",f.cast&&f.cast.length?"Con "+esc(f.cast.slice(0,4).join(", ")):""].filter(Boolean).join(" · ")}</p><p class="plot">${esc(f.trama||"La trama comparirà dopo l’abbinamento con TMDB.")}</p><div class="acts">${f.trailer_youtube?`<a class="btn" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=${esc(f.trailer_youtube)}">▶ Trailer</a>`:'<span class="btn off">Trailer non ancora disponibile</span>'}<button class="btn" data-seen>${f.visto?"✓ Visto":"Segna come visto"}</button><button class="btn${f.in_catalogo===false?" no":""}" data-cat>${f.in_catalogo===false?"Non in catalogo":"In Catalogo"}</button><button class="btn" data-edit>✎ Modifica</button></div></div>${editPanel(f)}<button class="x" data-close aria-label="Chiudi">✕</button>`;
+  $("#dl").innerHTML=`${cover(f)}<div class="info"><h3>${esc(f.titolo)}</h3><p class="meta">${esc(f.regista)} · ${f.anno}${f.durata?" · "+f.durata+" min":""}</p><p>${(f.generi||[]).map(g=>`<span class="tag">${esc(g)}</span>`).join("")}<span class="tag">${esc(f.formato||"Formato da verificare")}</span></p>${f.cast&&f.cast.length?`<p class="meta">Con ${esc(f.cast.slice(0,4).join(", "))}</p>`:""}<div class="vd"><b>Voto TMDB</b>${f.voto?`<span class="vdn">★ ${fmtV(f.voto)}/10</span>`:`<small style="width:auto">non disponibile</small>`}</div>${votoDavide(f)}<p class="plot">${esc(f.trama||"La trama comparirà dopo l’abbinamento con TMDB.")}</p><div class="acts">${f.trailer_youtube?`<a class="btn" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=${esc(f.trailer_youtube)}">▶ Trailer</a>`:'<span class="btn off">Trailer non ancora disponibile</span>'}<button class="btn" data-seen>${f.visto?"✓ Visto":"Segna come visto"}</button><button class="btn${f.in_catalogo===false?" no":""}" data-cat>${f.in_catalogo===false?"Non in catalogo":"In Catalogo"}</button><button class="btn" data-edit>✎ Modifica</button></div></div>${editPanel(f)}<button class="x" data-close aria-label="Chiudi">✕</button>`;
   $("#ed").hidden=!ed;
   if(!dlg.open)dlg.showModal();
 }
+const fmtV=v=>String(v).replace(".",",");
+const votoDavide=f=>{const v=f.voto_davide;if(RO&&!v)return"";return `<div class="vd"><b>Voto Davide</b>${RO?`<span class="vdn">${fmtV(v)}/10</span>`:`<span class="vds"><input class="vdi" id="vdi" type="text" inputmode="decimal" autocomplete="off" maxlength="4" placeholder="1–10" value="${v??""}" aria-label="Voto Davide da 1 a 10"><button class="vdb vdw" data-vdsave>Salva</button>${v?`<button class="vdb vdw" data-vdclear>Togli</button>`:""}</span><small>${v?"Voto attuale "+fmtV(v)+"/10":"Da 1 a 10, anche con decimali (es. 7,5)"}</small>`}</div>`};
+dlg.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="vdi"){e.preventDefault();const b=dlg.querySelector("[data-vdsave]");b&&b.click()}});
 const msg=t=>{const m=$("#em");if(m){m.textContent=t;m.scrollIntoView({block:"nearest"})}};
 let RO=false;
 async function post(u,b,raw){if(RO)throw new Error("Versione di sola lettura");const r=await fetch(u,{method:"POST",headers:raw?{}:{"Content-Type":"application/json"},body:raw?b:JSON.stringify(b)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||"Errore del server");return j}
@@ -266,6 +271,9 @@ document.addEventListener("click",e=>{
   else if(t.hasAttribute("data-gt")){const g=t.dataset.gt,i=selG.indexOf(g);if(i>=0)selG.splice(i,1);else selG.push(g);refreshG()}
   else if(t.hasAttribute("data-gnew"))newGenre();
   else if(t.hasAttribute("data-close"))dlg.close();
+  else if(t.hasAttribute("data-vdsave")||t.hasAttribute("data-vdclear")){const clear=t.hasAttribute("data-vdclear"),raw=$("#vdi").value.replace(",","."),n=Math.round(parseFloat(raw)*10)/10;
+    if(!clear&&!(n>=1&&n<=10)){alert("Inserisci un voto da 1 a 10 (anche con decimali).");return}
+    const v=clear?null:n;post("/api/edit",{id:cur.id,fields:{voto_davide:v}}).then(()=>{cur.voto_davide=v;open(cur)}).catch(e=>alert(e.message))}
   else if(t.hasAttribute("data-seen")){const v=!cur.visto;post("/api/edit",{id:cur.id,fields:{visto:v}}).then(()=>{cur.visto=v;render();open(cur)}).catch(e=>alert(e.message))}
   else if(t.hasAttribute("data-add")){$("#af").reset();$("#am").textContent="";$("#ad").showModal();$("#at").focus()}
   else if(t.hasAttribute("data-mv"))moveShelf(t.dataset.k,t.dataset.mv);

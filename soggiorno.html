@@ -679,7 +679,7 @@ document.addEventListener("pointerlockchange", () => { if (locked()) menu.hidden
 function openInfo(c) {
   const f = c.film; panel = true; if (locked()) document.exitPointerLock(); menu.hidden = true;
   $("#ii").src = `posters/${f.id}.jpg?v=${f._v || 0}`; $("#ii").style.display = ""; $("#ii").onerror = () => { $("#ii").style.display = "none"; };
-  $("#it").textContent = f.titolo; $("#im").textContent = `${f.regista || ""} · ${f.anno}${f.durata ? " · " + f.durata + " min" : ""}${f.voto ? " · ★ " + f.voto : ""}`;
+  $("#it").textContent = f.titolo; $("#im").textContent = `${f.regista || ""} · ${f.anno}${f.durata ? " · " + f.durata + " min" : ""}${f.voto ? " · Voto TMDB ★ " + String(f.voto).replace(".", ",") + "/10" : ""}${f.voto_davide ? " · Voto Davide " + String(f.voto_davide).replace(".", ",") + "/10" : ""}`;
   $("#ig").innerHTML = [...(f.generi || []), f.formato || "", f.visto ? "Visto" : "Da vedere", c.out ? "Non in catalogo" : ""].filter(Boolean).map(t => `<span class="tag">${esc(t)}</span>`).join("");
   $("#ip").textContent = f.trama || "";
   const y = $("#iy"); y.style.display = f.trailer_youtube ? "" : "none"; if (f.trailer_youtube) y.href = "https://www.youtube.com/watch?v=" + f.trailer_youtube;
