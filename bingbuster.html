@@ -106,12 +106,13 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 <footer>This product uses the TMDB API but is not endorsed or certified by TMDB.</footer>
 <dialog id="ad"><form id="af" class="edit addf"><h3>Aggiungi un film</h3>
 <p id="am" class="msg" role="status"></p>
-<label>Titolo *<input id="at" required></label>
+<p class="meta">Basta incollare il link TMDB: titolo, regista e anno vengono presi da lì.</p>
+<label>Link TMDB<input id="al" placeholder="https://www.themoviedb.org/movie/603-matrix"></label>
+<label>Titolo<input id="at"></label>
 <label>Regista (Cognome, Nome)<input id="ar" placeholder="Allen, Woody"></label>
-<label>Anno *<input id="ay" type="number" min="1888" max="2100" required></label>
+<label>Anno<input id="ay" type="number" min="1888" max="2100"></label>
 <label>Formato<select id="af2"><option>Blu-ray</option><option>DVD</option></select></label>
 <div class="tm"><label>Visto<select id="av"><option>Si</option><option selected>No</option></select></label><label>In Catalogo<select id="ac"><option>Si</option><option>No</option></select></label></div>
-<label>Link TMDB (facoltativo)<input id="al" placeholder="https://www.themoviedb.org/movie/603-matrix"></label>
 <div class="acts"><button class="btn" type="submit">Aggiungi</button><button class="btn off" type="button" data-addx>Annulla</button></div></form></dialog>
 <dialog id="dlg"><div class="dl" id="dl"></div></dialog>
 <script>
@@ -275,7 +276,7 @@ document.addEventListener("click",e=>{
     if(!clear&&!(n>=1&&n<=10)){alert("Inserisci un voto da 1 a 10 (anche con decimali).");return}
     const v=clear?null:n;post("/api/edit",{id:cur.id,fields:{voto_davide:v}}).then(()=>{cur.voto_davide=v;open(cur)}).catch(e=>alert(e.message))}
   else if(t.hasAttribute("data-seen")){const v=!cur.visto;post("/api/edit",{id:cur.id,fields:{visto:v}}).then(()=>{cur.visto=v;render();open(cur)}).catch(e=>alert(e.message))}
-  else if(t.hasAttribute("data-add")){$("#af").reset();$("#am").textContent="";$("#ad").showModal();$("#at").focus()}
+  else if(t.hasAttribute("data-add")){$("#af").reset();$("#am").textContent="";$("#ad").showModal();$("#al").focus()}
   else if(t.hasAttribute("data-mv"))moveShelf(t.dataset.k,t.dataset.mv);
   else if(t.hasAttribute("data-resetord"))post("/api/order",{ordine_generi:[]}).then(()=>{ORD=[];render()}).catch(e=>alert(e.message));
   else if(t.hasAttribute("data-export"))exportXlsx();
@@ -294,9 +295,10 @@ $("#ad").addEventListener("click",e=>{if(e.target===$("#ad"))$("#ad").close()});
 $("#af").addEventListener("submit",async e=>{
   e.preventDefault();const v=i=>$("#"+i).value.trim(),am=$("#am"),l=v("al"),m=l.match(/themoviedb\.org\/(movie|tv)\/(\d+)/);
   if(l&&!m)return am.textContent="Link TMDB non valido: deve essere simile a themoviedb.org/movie/603.";
+  if(!m&&(!v("at")||!v("ay")))return am.textContent="Senza link TMDB servono almeno titolo e anno.";
   am.textContent="Aggiungo…";
   try{
-    const {avviso,...n}=await post("/api/add",{titolo:v("at"),regista:v("ar"),anno:+v("ay"),formato:$("#af2").value,visto:$("#av").value==="Si",in_catalogo:$("#ac").value==="Si",tmdb:m?{id:+m[2],type:m[1]}:null});
+    const {avviso,...n}=await post("/api/add",{titolo:v("at"),regista:v("ar"),anno:+v("ay")||0,formato:$("#af2").value,visto:$("#av").value==="Si",in_catalogo:$("#ac").value==="Si",tmdb:m?{id:+m[2],type:m[1]}:null});
     FILMS.push(n);genre="Tutti";q="";unseen=false;$("#s").value="";$("#u").checked=false;
     $("#ad").close();render();open(n,true);msg(avviso||"Film aggiunto. Completa genere, copertina e trailer qui sotto.");
   }catch(err){am.textContent=err.message}
