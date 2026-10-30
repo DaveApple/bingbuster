@@ -21,9 +21,22 @@
   "televisione film",
   "Thriller",
   "Western",
-  "Altro"
+  "Altro",
+  "Serie TV"
  ],
  "generi_extra": [
-  "Serie TV"
+  "Serie TV",
+  "Grottesco",
+  "Pulp",
+  "Epico",
+  "Storico",
+  "Gangster",
+  "Poliziesco all'italiana",
+  "Yakuza",
+  "Arti marziali",
+  "Cinecomic",
+  "Wuxia",
+  "Biopic",
+  "Commedia nera"
  ]
 }
