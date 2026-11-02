@@ -86,6 +86,32 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
 .hit img,.hit span{width:36px;height:54px;object-fit:cover;flex:none;border-radius:3px;background:var(--bd)}
 .hit div{flex:1}
 .x{position:absolute;top:10px;right:12px;border:0;background:none;color:var(--mu);font-size:20px;cursor:pointer}
+header{transition:transform .22s}
+/* ---- telefono ---- */
+@media (max-width:700px){
+  header{padding:8px 12px 6px}header.hid{transform:translateY(-100%)}
+  .top{gap:8px}h1{font-size:30px}
+  .tools{gap:8px;margin:6px 0}
+  #s{flex:1 1 100%;min-width:0;font-size:16px;padding:11px 12px}
+  .tg{flex:1;font-size:14px;min-height:44px}.tg input{width:20px;height:20px}
+  .tools .btn{flex:none;min-width:48px;min-height:44px;padding:0 12px;text-align:center;line-height:44px;font-size:18px}.bl{display:none}
+  .chips{gap:8px;padding:2px 0 6px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}.chip{min-height:38px;padding:0 14px;scroll-snap-align:start;display:inline-flex;align-items:center}
+  .shelf{margin-top:16px}h2{font-size:22px;margin:0 12px 6px}
+  .mv{display:none}
+  .row{--w:calc((100vw - 24px - 20px) / 3);gap:14px 10px;padding:10px 12px 18px}
+  .case{--w:calc((100vw - 24px - 20px) / 3);padding:15px 2px 2px 8px}
+  .case::before{width:6px}.logo{left:6px;height:13px;font-size:8px}.art{inset:15px 2px 2px 8px;padding:5px 4px}
+  .ct{font-size:10.5px}.cy{font-size:10.5px}.seen{width:16px;height:16px;line-height:16px;font-size:10px;bottom:4px;right:4px}
+  .case:hover{transform:none}.case:active{transform:scale(.97)}
+  dialog{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;border:0}
+  .dl{padding:16px 14px calc(24px + env(safe-area-inset-bottom));gap:14px}
+  .dl .case{--w:112px}
+  .info{flex:1 1 55%;min-width:0}.info h3{font-size:26px}
+  .acts{width:100%}.acts .btn{flex:1 1 auto;min-height:44px;line-height:1.2;text-align:center;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
+  .x{top:8px;right:8px;width:44px;height:44px;font-size:24px;background:var(--sf);border-radius:50%}
+  .edit input,.edit select,.vdi{font-size:16px}.vdb,.vdi{min-height:40px}
+  footer{padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -95,10 +121,10 @@ dialog::backdrop{background:rgba(0,0,0,.6)}
   <div class="tools">
     <input id="s" type="search" placeholder="Cerca titolo o regista…" aria-label="Cerca">
     <label class="tg"><input type="checkbox" id="u"> Solo da vedere</label>
-    <button class="btn" id="rnd">🎲 Scegli per me</button>
-    <button class="btn" data-add>➕ Aggiungi film</button>
-    <button class="btn" data-export>⬇ Esporta Excel</button>
-    <a class="btn" href="soggiorno.html">🏠 Il mio soggiorno</a>
+    <button class="btn" id="rnd" aria-label="Scegli per me" title="Scegli per me">🎲<span class="bl"> Scegli per me</span></button>
+    <button class="btn" data-add aria-label="Aggiungi film" title="Aggiungi film">➕<span class="bl"> Aggiungi film</span></button>
+    <button class="btn" data-export aria-label="Esporta Excel" title="Esporta Excel">⬇<span class="bl"> Esporta Excel</span></button>
+    <a class="btn" href="soggiorno.html" aria-label="Il mio soggiorno" title="Il mio soggiorno">🏠<span class="bl"> Il mio soggiorno</span></a>
   </div>
   <div id="chips" class="chips"></div>
 </header>
@@ -182,6 +208,8 @@ function open(f,ed){
 }
 const fmtV=v=>String(v).replace(".",",");
 const votoDavide=f=>{const v=f.voto_davide;if(RO&&!v)return"";return `<div class="vd"><b>Voto Davide</b>${RO?`<span class="vdn">${fmtV(v)}/10</span>`:`<span class="vds"><input class="vdi" id="vdi" type="text" inputmode="decimal" autocomplete="off" maxlength="4" placeholder="1–10" value="${v??""}" aria-label="Voto Davide da 1 a 10"><button class="vdb vdw" data-vdsave>Salva</button>${v?`<button class="vdb vdw" data-vdclear>Togli</button>`:""}</span><small>${v?"Voto attuale "+fmtV(v)+"/10":"Da 1 a 10, anche con decimali (es. 7,5)"}</small>`}</div>`};
+{ let ly = 0; const hd = document.querySelector("header"), mq = matchMedia("(max-width:700px)");   // su telefono l'intestazione si nasconde scorrendo in giù e riappare scorrendo in su
+  addEventListener("scroll", () => { const y = scrollY; if (mq.matches) hd.classList.toggle("hid", y > ly && y > 90); else hd.classList.remove("hid"); ly = y; }, { passive: true }); }
 dlg.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="vdi"){e.preventDefault();const b=dlg.querySelector("[data-vdsave]");b&&b.click()}});
 const msg=t=>{const m=$("#em");if(m){m.textContent=t;m.scrollIntoView({block:"nearest"})}};
 let RO=false;
