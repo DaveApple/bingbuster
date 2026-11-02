@@ -123,6 +123,7 @@ import * as THREE from "./three.min.js";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const norm = s => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const mt=(h,q)=> {const H=" "+norm(h).replace(/[^a-z0-9]+/g," ")+" ";return norm(q).split(/[^a-z0-9]+/).filter(Boolean).every(t=>H.includes(t))};   // cerca ogni parola in qualsiasi ordine: "Woody Allen" trova "Allen, Woody"
 const cmpIt = (a, b) => a.localeCompare(b, "it");
 const TOUCH = matchMedia("(pointer:coarse)").matches && "ontouchstart" in window;
 if (TOUCH) { document.body.classList.add("touch"); $("#touch").hidden = false; $("#help").hidden = true; $("#cross").style.display = "none"; }
@@ -534,11 +535,11 @@ $("#views").innerHTML = barOrder().map(g => `<button class="chip" data-v="${esc(
   const picks = () => { $("#cpicks").innerHTML = [...CUS.films].map(([id, f]) => `<button class="chip on" data-rm="f:${id}">🎞 ${esc(f.titolo)} ✕</button>`).join("") + [...CUS.dirs].map(([k, l]) => `<button class="chip on" data-rm="d:${esc(k)}">🎬 ${esc(l)} ✕</button>`).join(""); };
   const dirs = new Map(); FILMS.forEach(f => { const k = dkey(f); if (k && !dirs.has(k)) dirs.set(k, dirOf(f).label); });
   $("#cqf").oninput = e => { const q = norm(e.target.value.trim()); if (q.length < 2) { $("#cqfr").innerHTML = ""; return; }
-    const r = FILMS.filter(f => norm(f.titolo).includes(q) && !CUS.films.has(f.id)).slice(0, 8);
+    const r = FILMS.filter(f => mt(f.titolo, q) && !CUS.films.has(f.id)).slice(0, 8);
     $("#cqfr").innerHTML = r.length ? r.map(f => `<button class="hit" data-id="${f.id}">${esc(f.titolo)} <small>${f.anno} · ${esc(f.regista || "")}</small></button>`).join("") : "<p>Nessun risultato.</p>"; };
   $("#cqfr").onclick = e => { const b = e.target.closest(".hit"); if (!b) return; const f = FILMS.find(x => x.id == b.dataset.id); CUS.films.set(f.id, f); $("#cqf").value = ""; $("#cqfr").innerHTML = ""; picks(); upd(); };
   $("#cqd").oninput = e => { const q = norm(e.target.value.trim()); if (q.length < 2) { $("#cqdr").innerHTML = ""; return; }
-    const r = [...dirs].filter(([k]) => k.includes(q) && !CUS.dirs.has(k)).slice(0, 8);
+    const r = [...dirs].filter(([k]) => mt(k, q) && !CUS.dirs.has(k)).slice(0, 8);
     $("#cqdr").innerHTML = r.length ? r.map(([k, l]) => `<button class="hit" data-k="${esc(k)}">${esc(l)} <small>${FILMS.filter(f => dkey(f) === k).length} film</small></button>`).join("") : "<p>Nessun risultato.</p>"; };
   $("#cqdr").onclick = e => { const b = e.target.closest(".hit"); if (!b) return; CUS.dirs.set(b.dataset.k, dirs.get(b.dataset.k)); $("#cqd").value = ""; $("#cqdr").innerHTML = ""; picks(); upd(); };
   $("#cust").addEventListener("click", e => {
@@ -758,7 +759,7 @@ function teleportTo(c) {
 }
 $("#q").oninput = e => {
   const q = norm(e.target.value.trim()); if (q.length < 2) { $("#res").innerHTML = ""; return; }
-  const r = covers.filter(c => norm(c.film.titolo + " " + (c.film.regista || "")).includes(q)).slice(0, 10);
+  const r = covers.filter(c => mt(c.film.titolo + " " + (c.film.regista || ""), q)).slice(0, 10);
   $("#res").innerHTML = r.length ? r.map(c => `<button class="hit" data-i="${covers.indexOf(c)}">${esc(c.film.titolo)} <small>${c.film.anno} · ${esc(c.film.regista || "")} · ${esc(gOf(c.film))}</small></button>`).join("") : "<p>Nessun risultato.</p>";
 };
 $("#res").onclick = e => { const b = e.target.closest(".hit"); if (!b) return; teleportTo(covers[+b.dataset.i]); $("#q").value = ""; $("#res").innerHTML = ""; enter(); };

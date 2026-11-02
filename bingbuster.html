@@ -21,7 +21,7 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 header{position:sticky;top:env(safe-area-inset-top,0px);z-index:11;background:var(--bg);padding:12px 16px 8px;border-bottom:1px solid var(--bd)}
 .top{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
 h1{font:400 40px/1 var(--hd);letter-spacing:.05em;margin:0;color:var(--ac)}
-#count{color:var(--mu);font-size:13px}
+#count{color:var(--mu);font-size:13px}#count b{color:var(--tx);font-weight:600}
 .tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
 #s{flex:1;min-width:180px;padding:9px 12px;border-radius:10px;border:1px solid var(--bd);background:var(--sf);color:var(--tx);font:inherit}
 .tg{display:flex;gap:6px;align-items:center;font-size:14px;cursor:pointer}
@@ -147,9 +147,10 @@ let genre="Tutti",unseen=false,q="",cur=null;
 const $=s=>document.querySelector(s),dlg=$("#dlg");
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const norm=s=>s.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+const mt=(h,q)=>{const H=" "+norm(h).replace(/[^a-z0-9]+/g," ")+" ";return norm(q).split(/[^a-z0-9]+/).filter(Boolean).every(t=>H.includes(t))};   // cerca ogni parola in qualsiasi ordine: "Woody Allen" trova "Allen, Woody"
 const hue=s=>{let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))%360;return h};
 const gOf=f=>(f.generi&&f.generi[0])||"Altro";
-const visible=()=>FILMS.filter(f=>(genre==="Tutti"||genre===GR||gOf(f)===genre||(f.generi||[]).includes(genre))&&(!unseen||!f.visto)&&(!q||norm(f.titolo+" "+f.regista).includes(q)));
+const visible=()=>FILMS.filter(f=>(genre==="Tutti"||genre===GR||gOf(f)===genre||(f.generi||[]).includes(genre))&&(!unseen||!f.visto)&&(!q||mt(f.titolo+" "+f.regista,q)));
 const cover=f=>{const bd=f.formato!=="DVD";return `<button class="case ${bd?"bd":"dvd"}${f.in_catalogo===false?" out":""}" data-id="${f.id}" style="--h:${hue(f.titolo)}"><b class="logo">${bd?"Blu-ray":"DVD"}</b><span class="art"><img src="posters/${f.id}.jpg?v=${f._v||0}" alt="" loading="lazy" onerror="this.remove()"><span class="ct">${esc(f.titolo)}</span><span class="cy">${f.anno}</span>${f.visto?'<i class="seen">✓</i>':""}</span></button>`};
 const GR="@regista",cmpIt=(a,b)=>a.localeCompare(b,"it");
 let ORD=[],GX=[];   // GX = generi creati a mano (settings.json)
@@ -176,7 +177,8 @@ function render(){
   const keys=dir?Object.keys(by).sort((a,b)=>(meta[a].sur===""?1:0)-(meta[b].sur===""?1:0)||cmpIt(meta[a].sur,meta[b].sur)||cmpIt(meta[a].name,meta[b].name)):genreOrder().filter(g=>by[g]),tutti=genre==="Tutti";
   $("#shelves").innerHTML=keys.length?keys.map((k,i)=>`<section class="shelf"><h2>${esc(k)}<small>${gv?cnt(by[k]):by[k].length}</small>${tutti?`<span class="mv"><button class="mvb" data-mv="up" data-k="${esc(k)}" aria-label="Sposta lo scaffale in su"${i?"":" disabled"}>▲</button><button class="mvb" data-mv="down" data-k="${esc(k)}" aria-label="Sposta lo scaffale in giù"${i<keys.length-1?"":" disabled"}>▼</button></span>`:""}</h2><div class="row">${by[k].sort(cmpDir).map(f=>gv&&gOf(f)!==genre?cover(f).replace('class="case ','class="case sec '):cover(f)).join("")}</div><div class="board"></div></section>`).join(""):'<p class="empty">Nessun film trovato su questi scaffali.</p>';
   $("#ro").hidden=!ORD.length;
-  $("#count").textContent=`${gv?cnt(vis):vis.length} film · ${keys.length} scaffali`;
+  const base=gv?vis.filter(f=>gOf(f)===genre):vis,nv=base.filter(f=>f.visto).length;   // come il totale: nei generi si contano solo i film del genere principale
+  $("#count").innerHTML=`${gv?cnt(vis):vis.length} film · ${keys.length} scaffali<span class="cv"> · <b>✓ ${nv}</b> visti · <b>${base.length-nv}</b> da vedere</span>`;
 }
 const cmpDir=(a,b)=>{const A=dirOf(a),B=dirOf(b);return (A.sur===""?1:0)-(B.sur===""?1:0)||cmpIt(A.sur,B.sur)||cmpIt(A.name,B.name)||a.anno-b.anno||cmpIt(a.titolo,b.titolo)};
 const allGenres=()=>[...new Set([...FILMS.flatMap(f=>f.generi||[]),...GX])].sort((a,b)=>a.localeCompare(b,"it"));
