@@ -177,8 +177,8 @@ function render(){
   const keys=dir?Object.keys(by).sort((a,b)=>(meta[a].sur===""?1:0)-(meta[b].sur===""?1:0)||cmpIt(meta[a].sur,meta[b].sur)||cmpIt(meta[a].name,meta[b].name)):genreOrder().filter(g=>by[g]),tutti=genre==="Tutti";
   $("#shelves").innerHTML=keys.length?keys.map((k,i)=>`<section class="shelf"><h2>${esc(k)}<small>${gv?cnt(by[k]):by[k].length}</small>${tutti?`<span class="mv"><button class="mvb" data-mv="up" data-k="${esc(k)}" aria-label="Sposta lo scaffale in su"${i?"":" disabled"}>▲</button><button class="mvb" data-mv="down" data-k="${esc(k)}" aria-label="Sposta lo scaffale in giù"${i<keys.length-1?"":" disabled"}>▼</button></span>`:""}</h2><div class="row">${by[k].sort(cmpDir).map(f=>gv&&gOf(f)!==genre?cover(f).replace('class="case ','class="case sec '):cover(f)).join("")}</div><div class="board"></div></section>`).join(""):'<p class="empty">Nessun film trovato su questi scaffali.</p>';
   $("#ro").hidden=!ORD.length;
-  const base=gv?vis.filter(f=>gOf(f)===genre):vis,nv=base.filter(f=>f.visto).length;   // come il totale: nei generi si contano solo i film del genere principale
-  $("#count").innerHTML=`${gv?cnt(vis):vis.length} film · ${keys.length} scaffali<span class="cv"> · <b>✓ ${nv}</b> visti · <b>${base.length-nv}</b> da vedere</span>`;
+  const base=gv?vis.filter(f=>gOf(f)===genre):vis,nv=base.filter(f=>f.visto).length;const nb=base.filter(f=>f.formato==="Blu-ray").length,nd=base.filter(f=>f.formato==="DVD").length;   // come il totale: nei generi si contano solo i film del genere principale
+  $("#count").innerHTML=`${gv?cnt(vis):vis.length} film · ${keys.length} scaffali<span class="cv"> · <b>✓ ${nv}</b> visti · <b>${base.length-nv}</b> da vedere · <b>${nb}</b> BR · <b>${nd}</b> DVD</span>`;
 }
 const cmpDir=(a,b)=>{const A=dirOf(a),B=dirOf(b);return (A.sur===""?1:0)-(B.sur===""?1:0)||cmpIt(A.sur,B.sur)||cmpIt(A.name,B.name)||a.anno-b.anno||cmpIt(a.titolo,b.titolo)};
 const allGenres=()=>[...new Set([...FILMS.flatMap(f=>f.generi||[]),...GX])].sort((a,b)=>a.localeCompare(b,"it"));
